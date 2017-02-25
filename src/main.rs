@@ -1,3 +1,7 @@
+extern crate monkey;
+
+use monkey::token::{hello};
+
 fn main() {
-    print!("ok~~~~~");
+  println!("Hello in Japanese: {}", hello());
 }
