@@ -1,15 +1,14 @@
 extern crate monkey;
 
-use monkey::token::{hello, EOF};
+use monkey::{lexer, token};
 
 fn main() {
-    // let n = 5;
-    println!("Hello in Japanese: {}", hello());
-    println!("Hello in Japanese: {}", EOF);
+    let l = lexer::new("=+,;(){}");
+    // let c = token::TokenType::from_str("=");
 
-    // let l = new(";.".to_string());
-    // println!("Hello in Japanese: {}", l.input);
-    // println!("Hello in Japanese: {}", l.ch);
-    // println!("Hello in Japanese: {}", l.position);
-    // println!("Hello in Japanese: {}", l.read_position);
+    for c in l.input.chars() {
+        print!("{}", token::TokenType::from_str(c).to_str());
+    }
+    // print!("{}", l.input.chars());
+    // println!("\n{}", c.to_str());
 }

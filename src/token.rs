@@ -1,37 +1,51 @@
-pub type TokenType = &'static str;
-
-pub struct Token {
-  pub token_type: TokenType,
-  pub literal: String,
+pub enum TokenType {
+    ILLEGAL,
+    EOF,
+    IDENT,
+    INT,
+    ASSIGN,
+    PLUS,
+    COMMA,
+    SEMICOLON,
+    LPAREN,
+    RPAREN,
+    LBRACE,
+    RBRACE,
+    FUNCTION,
+    LET,
 }
 
-pub const ILLEGAL: &'static str = "ILLEGAL";
-pub const EOF: &'static str = "EOF";
-pub const IDENT: &'static str = "IDENT";
-pub const INT: &'static str = "INT";
-pub const ASSIGN: &'static str = "=";
-pub const PLUS: &'static str = "+";
-pub const COMMA: &'static str = ",";
-pub const SEMICOLON: &'static str = ";";
-pub const LPAREN: &'static str = "(";
-pub const RPAREN: &'static str = ")";
-pub const LBRACE: &'static str = "{";
-pub const RBRACE: &'static str = "}";
-pub const FUNCTION: &'static str = "FUNCTION";
-pub const LET: &'static str = "LET";
-
-pub fn hello() -> TokenType {
-  "こんにちは!!!"
+impl TokenType {
+    pub fn from_str(s: &'static str) -> TokenType {
+        match s {
+            "=" => TokenType::ASSIGN,
+            "+" => TokenType::PLUS,
+            "," => TokenType::COMMA,
+            ";" => TokenType::SEMICOLON,
+            "(" => TokenType::LPAREN,
+            ")" => TokenType::RPAREN,
+            "{" => TokenType::LBRACE,
+            "}" => TokenType::RBRACE,
+            _ => TokenType::EOF,
+        }
+    }
+    
+    pub fn to_str(&self) -> &'static str {
+         match *self {
+             TokenType::EOF => "EOF",
+             TokenType::IDENT => "IDENT",
+             TokenType::INT => "INT",
+             TokenType::ASSIGN => "=",
+             TokenType::PLUS => "+",
+             TokenType::COMMA => ",",
+             TokenType::SEMICOLON => ";",
+             TokenType::LPAREN => "(",
+             TokenType::RPAREN => ")",
+             TokenType::LBRACE => "{",
+             TokenType::RBRACE => "}",
+             TokenType::FUNCTION => "FUNCTION",
+             TokenType::LET => "LET",
+             _ => "ILLEGAL",
+         }
+    }
 }
-
-// var keywords = map[string]TokenType{
-// 	"fn":  FUNCTION,
-// 	"let": LET,
-// }
-
-// func LookUpIdent(ident string) TokenType {
-// 	if tok, ok := keywords[ident]; ok {
-// 		return tok
-// 	}
-// 	return IDENT
-// }
