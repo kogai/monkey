@@ -26,7 +26,7 @@ impl TokenType {
             ")" => TokenType::RPAREN,
             "{" => TokenType::LBRACE,
             "}" => TokenType::RBRACE,
-            _ => TokenType::EOF,
+            _ => TokenType::ILLEGAL,
         }
     }
     
@@ -49,3 +49,22 @@ impl TokenType {
          }
     }
 }
+
+pub struct Token<'a> {
+    pub token_type: TokenType,
+    pub literal: &'a str,
+}
+
+pub fn new<'a>(t: TokenType) -> Token<'a> {
+    Token {
+        literal: t.to_str(),
+        token_type: t,
+    }
+}
+
+// fn new_token<'a>(t: token::TokenType, ch: &'a String) -> token::Token<'a> {
+//     token::Token {
+//         token_type: t,
+//         literal: ch,
+//     }
+// }

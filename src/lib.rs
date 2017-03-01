@@ -87,30 +87,9 @@ pub mod lexer;
 //     }
 // }
 
-// pub type TokenType = &'static str;
-
 // pub struct Token<'a> {
 //     pub token_type: TokenType,
 //     pub literal: &'a String,
-// }
-
-// pub const ILLEGAL: &'static str = "ILLEGAL";
-// pub const EOF: &'static str = "EOF";
-// pub const IDENT: &'static str = "IDENT";
-// pub const INT: &'static str = "INT";
-// pub const ASSIGN: &'static str = "=";
-// pub const PLUS: &'static str = "+";
-// pub const COMMA: &'static str = ",";
-// pub const SEMICOLON: &'static str = ";";
-// pub const LPAREN: &'static str = "(";
-// pub const RPAREN: &'static str = ")";
-// pub const LBRACE: &'static str = "{";
-// pub const RBRACE: &'static str = "}";
-// pub const FUNCTION: &'static str = "FUNCTION";
-// pub const LET: &'static str = "LET";
-
-// pub fn hello() -> TokenType {
-//     "こんにちは!!!"
 // }
 
 // // var keywords = map[string]TokenType{
