@@ -1,3 +1,4 @@
+#[derive(Debug, PartialEq)]
 pub enum TokenType {
     ILLEGAL,
     EOF,
@@ -16,7 +17,7 @@ pub enum TokenType {
 }
 
 impl TokenType {
-    pub fn from_str(s: &'static str) -> TokenType {
+    pub fn from_str<'a>(s: &'a str) -> TokenType {
         match s {
             "=" => TokenType::ASSIGN,
             "+" => TokenType::PLUS,
@@ -26,13 +27,14 @@ impl TokenType {
             ")" => TokenType::RPAREN,
             "{" => TokenType::LBRACE,
             "}" => TokenType::RBRACE,
+            "" => TokenType::EOF,
             _ => TokenType::ILLEGAL,
         }
     }
     
     pub fn to_str(&self) -> &'static str {
          match *self {
-             TokenType::EOF => "EOF",
+             TokenType::EOF => "",
              TokenType::IDENT => "IDENT",
              TokenType::INT => "INT",
              TokenType::ASSIGN => "=",
@@ -61,10 +63,3 @@ pub fn new<'a>(t: TokenType) -> Token<'a> {
         token_type: t,
     }
 }
-
-// fn new_token<'a>(t: token::TokenType, ch: &'a String) -> token::Token<'a> {
-//     token::Token {
-//         token_type: t,
-//         literal: ch,
-//     }
-// }
