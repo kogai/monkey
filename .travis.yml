@@ -1,0 +1,14 @@
+language: rust
+matrix:
+    fast_finish: true
+    include:
+        - rust: nightly
+
+cache:
+    apt: true
+    directories:
+        - target/debug/deps
+        - target/debug/build
+
+script:
+  - cargo test --verbose
