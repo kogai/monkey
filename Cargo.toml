@@ -1,0 +1,6 @@
+[package]
+name = "monkey"
+version = "0.1.0"
+authors = ["小飼慎一 <kogai0121@gmail.com>"]
+
+[dependencies]
