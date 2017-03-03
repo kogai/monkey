@@ -44,20 +44,60 @@ mod tests {
 
     #[test]
     fn it_analysis_simple_token() {
-        let mut l = new("=+,;(){}");
+        let mut l = new("
+            let five = 5;
+            let ten = 10;
+
+            let add = fn(x, y) {
+            x + y;
+            };
+
+            let result = add(five, ten);
+        ");
         let expects = [
+            (token::TokenType::LET, "let"),
+            (token::TokenType::IDENT, "five"),
             (token::TokenType::ASSIGN, "="),
-            (token::TokenType::PLUS, "+"),
-            (token::TokenType::COMMA, ","),
+            (token::TokenType::INT, "5"),
             (token::TokenType::SEMICOLON, ";"),
+
+            (token::TokenType::LET, "let"),
+            (token::TokenType::IDENT, "ten"),
+            (token::TokenType::ASSIGN, "="),
+            (token::TokenType::INT, "10"),
+            (token::TokenType::SEMICOLON, ";"),
+
+            (token::TokenType::LET, "let"),
+            (token::TokenType::IDENT, "add"),
+            (token::TokenType::ASSIGN, "="),
+            (token::TokenType::FUNCTION, "fn"),
             (token::TokenType::LPAREN, "("),
+            (token::TokenType::IDENT, "x"),
+            (token::TokenType::COMMA, ","),
+            (token::TokenType::IDENT, "y"),
             (token::TokenType::RPAREN, ")"),
             (token::TokenType::LBRACE, "{"),
+            (token::TokenType::IDENT, "x"),
+            (token::TokenType::PLUS, "+"),
+            (token::TokenType::IDENT, "y"),
+            (token::TokenType::SEMICOLON, ";"),
             (token::TokenType::RBRACE, "}"),
-            (token::TokenType::EOF, ""),
+
+            (token::TokenType::LET, "let"),
+            (token::TokenType::IDENT, "result"),
+            (token::TokenType::ASSIGN, "="),
+            (token::TokenType::IDENT, "add"),
+            (token::TokenType::LPAREN, "("),
+            (token::TokenType::IDENT, "five"),
+            (token::TokenType::COMMA, ","),
+            (token::TokenType::IDENT, "ten"),
+            (token::TokenType::RPAREN, ")"),
+            (token::TokenType::SEMICOLON, ";"),
+
+            (token::TokenType::EOF, "")
         ];
 
-        for expect in &expects {
+        for expect in expects.iter() {
             let t = l.next_token();
             assert_eq!(t.token_type, expect.0);
             assert_eq!(t.literal, expect.1);
