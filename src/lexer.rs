@@ -21,9 +21,24 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn next_token<'b>(&mut self) -> token::Token<'b> {
-        let t = token::new(token::TokenType::from_str(self.current_char.as_str()));
+        self.skip_white_space();
+        let t = token::new(
+            token::TokenType::from_str(
+                self.current_char.as_str()
+            )
+        );
         self.read_char();
         return t;
+    }
+    pub fn skip_white_space(&mut self) {
+        let is_whitespace = match self.current_char.chars().last() {
+            Some(x) => x.is_whitespace(),
+            None => false,
+        };
+        if is_whitespace {
+            self.read_char();
+            self.skip_white_space()
+        }
     }
 }
 
