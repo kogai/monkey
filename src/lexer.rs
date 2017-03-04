@@ -42,6 +42,10 @@ impl<'a> Lexer<'a> {
     }
 }
 
+fn is_letter(s: &str) -> bool {
+    "a" <= s && s <= "z" || "A" <= s && s <= "Z" || "_" == s
+}
+
 pub fn new(input: &'static str) -> Lexer {
     let mut l = Lexer {
         input: input,
@@ -58,6 +62,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn it_should_detect_character() {
+        assert!(is_letter("a"));
+        assert!(is_letter("Z"));
+        assert!(is_letter("_"));
+        assert!(!is_letter("-"));
+        assert!(!is_letter("あ"));
+        assert!(!is_letter(" "));
+        assert!(!is_letter("漢"));
+    }
+
     fn it_analysis_simple_token() {
         let mut l = new("
             let five = 5;
