@@ -27,8 +27,10 @@ impl TokenType {
             ")" => TokenType::RPAREN,
             "{" => TokenType::LBRACE,
             "}" => TokenType::RBRACE,
+            "let" => TokenType::LET,
+            "fn" => TokenType::FUNCTION,
             "" => TokenType::EOF,
-            _ => TokenType::ILLEGAL,
+            _ => TokenType::IDENT,
         }
     }
     

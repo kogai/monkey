@@ -22,14 +22,33 @@ impl<'a> Lexer<'a> {
 
     pub fn next_token<'b>(&mut self) -> token::Token<'b> {
         self.skip_white_space();
+        let current_char = self.current_char.clone();
+        let seed = match current_char.as_str() {
+            x if is_letter(x) => self.read_identifier(),
+            x => x.to_string(),
+        };
+        
         let t = token::new(
-            token::TokenType::from_str(
-                self.current_char.as_str()
-            )
+            token::TokenType::from_str(seed.as_str())
         );
         self.read_char();
         return t;
     }
+
+    pub fn read_identifier(&mut self) -> String {
+        let start = (self.position - 1) as usize;
+
+        while is_letter(self.current_char.as_str()) {
+            self.read_char();
+        }
+
+        let input_chars = self.input.chars().collect::<Vec<char>>();
+        let end = (self.position - 1) as usize;
+        let splited = &input_chars[start..end].iter().fold("".to_string(), |acc, &s| { format!("{}{}", acc, s.to_string()) });
+
+        (*splited).to_string()
+    }
+
     pub fn skip_white_space(&mut self) {
         let is_whitespace = match self.current_char.chars().last() {
             Some(x) => x.is_whitespace(),
@@ -72,6 +91,7 @@ mod tests {
         assert!(!is_letter("漢"));
     }
 
+    // #[test]
     fn it_analysis_simple_token() {
         let mut l = new("
             let five = 5;
