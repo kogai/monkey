@@ -22,15 +22,17 @@ impl<'a> Lexer<'a> {
 
     pub fn next_token<'b>(&mut self) -> token::Token<'b> {
         self.skip_white_space();
-        let current_char = self.current_char.clone();
+        let current_char = &self.current_char.clone();
 
-        let seed = match current_char.as_str() {
+        let seed = match current_char {
             x if is_letter(x) => self.read_identifier(),
+            x if is_digit(x) => self.read_digit(),
             x => {
                 self.read_char();
-                x.to_string()
+                x.clone()
             },
         };
+
         let t = token::new(
             token::TokenType::from_str(seed.as_str())
         );
@@ -40,7 +42,20 @@ impl<'a> Lexer<'a> {
     pub fn read_identifier(&mut self) -> String {
         let start = (self.position - 1) as usize;
 
-        while is_letter(self.current_char.as_str()) {
+        while is_letter(&self.current_char) {
+            self.read_char();
+        }
+
+        let input_chars = self.input.chars().collect::<Vec<char>>();
+        let end = (self.position - 1) as usize;
+        let splited = &input_chars[start..end].iter().fold("".to_string(), |acc, &s| { format!("{}{}", acc, s.to_string()) });
+        (*splited).to_string()
+    }
+
+    pub fn read_digit(&mut self) -> String {
+        let start = (self.position - 1) as usize;
+
+        while is_digit(&self.current_char) {
             self.read_char();
         }
 
@@ -62,8 +77,16 @@ impl<'a> Lexer<'a> {
     }
 }
 
-fn is_letter(s: &str) -> bool {
-    "a" <= s && s <= "z" || "A" <= s && s <= "Z" || "_" == s
+fn is_letter(s: &String) -> bool {
+    &"a".to_string() <= s && s <= &"z".to_string() || &"A".to_string() <= s && s <= &"Z".to_string() || &"_".to_string() == s
+}
+
+pub fn is_digit(s: &String) -> bool {
+    let c = s.chars().nth(0);
+    match c {
+        Some(n) => n.is_digit(10),
+        None => false,
+    }
 }
 
 pub fn new(input: &'static str) -> Lexer {
@@ -83,13 +106,24 @@ mod tests {
 
     #[test]
     fn it_should_detect_character() {
-        assert!(is_letter("a"));
-        assert!(is_letter("Z"));
-        assert!(is_letter("_"));
-        assert!(!is_letter("-"));
-        assert!(!is_letter("あ"));
-        assert!(!is_letter(" "));
-        assert!(!is_letter("漢"));
+        assert!(is_letter(&"a".to_string()));
+        assert!(is_letter(&"Z".to_string()));
+        assert!(is_letter(&"_".to_string()));
+        assert!(!is_letter(&"-".to_string()));
+        assert!(!is_letter(&"あ".to_string()));
+        assert!(!is_letter(&" ".to_string()));
+        assert!(!is_letter(&"漢".to_string()));
+    }
+
+    #[test]
+    fn it_should_detect_digit() {
+        assert!(!is_digit(&"a".to_string()));
+        assert!(!is_digit(&"Z".to_string()));
+        assert!(!is_digit(&"_".to_string()));
+        assert!(is_digit(&"0".to_string()));
+        assert!(is_digit(&"9".to_string()));
+    }
+
     }
 
     // #[test]

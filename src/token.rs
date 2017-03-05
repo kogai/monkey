@@ -1,3 +1,5 @@
+use lexer::is_digit;
+
 #[derive(Debug, PartialEq)]
 pub enum TokenType {
     ILLEGAL,
@@ -30,6 +32,7 @@ impl TokenType {
             "let" => TokenType::LET,
             "fn" => TokenType::FUNCTION,
             "" => TokenType::EOF,
+            n if is_digit(&n.to_string()) => TokenType::INT,
             _ => TokenType::IDENT,
         }
     }
