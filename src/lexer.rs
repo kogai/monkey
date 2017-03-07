@@ -124,8 +124,6 @@ mod tests {
         assert!(is_digit(&"9".to_string()));
     }
 
-    }
-
     // #[test]
     fn it_analysis_simple_token() {
         let mut l = new("

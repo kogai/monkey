@@ -4,7 +4,7 @@ use lexer::is_digit;
 pub enum TokenType {
     ILLEGAL,
     EOF,
-    IDENT,
+    IDENT(String),
     INT,
     ASSIGN,
     PLUS,
@@ -33,7 +33,7 @@ impl TokenType {
             "fn" => TokenType::FUNCTION,
             "" => TokenType::EOF,
             n if is_digit(&n.to_string()) => TokenType::INT,
-            _ => TokenType::IDENT,
+            id => TokenType::IDENT(id.to_string()),
         }
     }
     
