@@ -1,6 +1,5 @@
-extern crate monkey;
-
-use monkey::lexer;
+mod token;
+mod lexer;
 
 fn main() {
     let mut l = lexer::new("
