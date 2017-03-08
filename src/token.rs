@@ -1,11 +1,11 @@
 use lexer::is_digit;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
     ILLEGAL,
     EOF,
     IDENT(String),
-    INT,
+    INT(String),
     ASSIGN,
     PLUS,
     COMMA,
@@ -32,16 +32,14 @@ impl TokenType {
             "let" => TokenType::LET,
             "fn" => TokenType::FUNCTION,
             "" => TokenType::EOF,
-            n if is_digit(&n.to_string()) => TokenType::INT,
+            n if is_digit(&n.to_string()) => TokenType::INT(n.to_string()),
             id => TokenType::IDENT(id.to_string()),
         }
     }
-    
-    pub fn to_str(&self) -> &'static str {
-         match *self {
+
+    pub fn to_str<'a>(&'a self) -> String {
+         (match *self {
              TokenType::EOF => "",
-             TokenType::IDENT => "IDENT",
-             TokenType::INT => "INT",
              TokenType::ASSIGN => "=",
              TokenType::PLUS => "+",
              TokenType::COMMA => ",",
@@ -50,21 +48,23 @@ impl TokenType {
              TokenType::RPAREN => ")",
              TokenType::LBRACE => "{",
              TokenType::RBRACE => "}",
-             TokenType::FUNCTION => "FUNCTION",
-             TokenType::LET => "LET",
+             TokenType::FUNCTION => "fn",
+             TokenType::LET => "let",
+             TokenType::INT(ref x) => x,
+             TokenType::IDENT(ref x) => x,
              _ => "ILLEGAL",
-         }
+         }).to_string()
     }
 }
 
-pub struct Token<'a> {
+pub struct Token {
     pub token_type: TokenType,
-    pub literal: &'a str,
+    pub literal: String,
 }
 
-pub fn new<'a>(t: TokenType) -> Token<'a> {
+pub fn new(t: TokenType) -> Token {
     Token {
+        token_type: t.clone(),
         literal: t.to_str(),
-        token_type: t,
     }
 }

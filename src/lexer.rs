@@ -20,7 +20,7 @@ impl<'a> Lexer<'a> {
         self.read_position += 1;
     }
 
-    pub fn next_token<'b>(&mut self) -> token::Token<'b> {
+    pub fn next_token(&mut self) -> token::Token {
         self.skip_white_space();
         let current_char = &self.current_char.clone();
 
@@ -32,11 +32,11 @@ impl<'a> Lexer<'a> {
                 x.clone()
             },
         };
-
-        let t = token::new(
-            token::TokenType::from_str(seed.as_str())
-        );
-        return t;
+        token::new(
+            token::TokenType::from_str(
+                seed.as_str()
+            )
+        )
     }
 
     pub fn read_identifier(&mut self) -> String {
@@ -124,7 +124,7 @@ mod tests {
         assert!(is_digit(&"9".to_string()));
     }
 
-    // #[test]
+    #[test]
     fn it_analysis_simple_token() {
         let mut l = new("
             let five = 5;
@@ -138,41 +138,42 @@ mod tests {
         ");
         let expects = [
             (token::TokenType::LET, "let"),
-            (token::TokenType::IDENT, "five"),
+            (token::TokenType::IDENT("five".to_string()), "five"),
             (token::TokenType::ASSIGN, "="),
-            (token::TokenType::INT, "5"),
+            (token::TokenType::INT("5".to_string()), "5"),
             (token::TokenType::SEMICOLON, ";"),
 
             (token::TokenType::LET, "let"),
-            (token::TokenType::IDENT, "ten"),
+            (token::TokenType::IDENT("ten".to_string()), "ten"),
             (token::TokenType::ASSIGN, "="),
-            (token::TokenType::INT, "10"),
+            (token::TokenType::INT("10".to_string()), "10"),
             (token::TokenType::SEMICOLON, ";"),
 
             (token::TokenType::LET, "let"),
-            (token::TokenType::IDENT, "add"),
+            (token::TokenType::IDENT("add".to_string()), "add"),
             (token::TokenType::ASSIGN, "="),
             (token::TokenType::FUNCTION, "fn"),
             (token::TokenType::LPAREN, "("),
-            (token::TokenType::IDENT, "x"),
+            (token::TokenType::IDENT("x".to_string()), "x"),
             (token::TokenType::COMMA, ","),
-            (token::TokenType::IDENT, "y"),
+            (token::TokenType::IDENT("y".to_string()), "y"),
             (token::TokenType::RPAREN, ")"),
             (token::TokenType::LBRACE, "{"),
-            (token::TokenType::IDENT, "x"),
+            (token::TokenType::IDENT("x".to_string()), "x"),
             (token::TokenType::PLUS, "+"),
-            (token::TokenType::IDENT, "y"),
+            (token::TokenType::IDENT("y".to_string()), "y"),
             (token::TokenType::SEMICOLON, ";"),
             (token::TokenType::RBRACE, "}"),
+            (token::TokenType::SEMICOLON, ";"),
 
             (token::TokenType::LET, "let"),
-            (token::TokenType::IDENT, "result"),
+            (token::TokenType::IDENT("result".to_string()), "result"),
             (token::TokenType::ASSIGN, "="),
-            (token::TokenType::IDENT, "add"),
+            (token::TokenType::IDENT("add".to_string()), "add"),
             (token::TokenType::LPAREN, "("),
-            (token::TokenType::IDENT, "five"),
+            (token::TokenType::IDENT("five".to_string()), "five"),
             (token::TokenType::COMMA, ","),
-            (token::TokenType::IDENT, "ten"),
+            (token::TokenType::IDENT("ten".to_string()), "ten"),
             (token::TokenType::RPAREN, ")"),
             (token::TokenType::SEMICOLON, ";"),
 
