@@ -27,17 +27,17 @@ pub enum TokenType {
     IF,
     ELSE,
     RETURN,
+    EQ,
+    NOTEQ,
 }
 
 impl TokenType {
     pub fn from_str<'a>(s: &'a str) -> TokenType {
         match s {
-            "=" => TokenType::ASSIGN,
             "+" => TokenType::PLUS,
             "-" => TokenType::MINUS,
             "*" => TokenType::MULTIPLY,
             "/" => TokenType::DIVIDE,
-            "!" => TokenType::BANG,
             "<" => TokenType::LT,
             ">" => TokenType::GT,
             "," => TokenType::COMMA,
@@ -54,12 +54,17 @@ impl TokenType {
             "else" => TokenType::ELSE,
             "return" => TokenType::RETURN,
             "" => TokenType::EOF,
+            "=" => TokenType::ASSIGN,
+            "!" => TokenType::BANG,
+            "==" => TokenType::EQ,
+            "!=" => TokenType::NOTEQ,
             n if is_digit(&n.to_string()) => TokenType::INT(n.to_string()),
             id if is_letter(&id.to_string()) => TokenType::IDENT(id.to_string()),
             _ => TokenType::ILLEGAL
         }
     }
 
+    // このメソッドは要らない気がする
     pub fn to_str<'a>(&'a self) -> String {
          (match *self {
              TokenType::EOF => "",
@@ -84,6 +89,8 @@ impl TokenType {
              TokenType::IF => "if",
              TokenType::ELSE => "else",
              TokenType::RETURN => "return",
+             TokenType::EQ => "==",
+             TokenType::NOTEQ => "!=",
              TokenType::INT(ref x) => x,
              TokenType::IDENT(ref x) => x,
              _ => "ILLEGAL",

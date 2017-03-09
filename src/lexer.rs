@@ -20,13 +20,29 @@ impl<'a> Lexer<'a> {
         self.read_position += 1;
     }
 
+    fn peak_char(&self) -> String {
+        match self.input.chars().nth((self.read_position - 1) as usize) {
+            Some(x) => x.to_string(),
+            None => "".to_string(),
+        }
+    }
+
     pub fn next_token(&mut self) -> token::Token {
         self.skip_white_space();
         let current_char = &self.current_char.clone();
-
         let seed = match current_char {
             x if is_letter(x) => self.read_identifier(),
             x if is_digit(x) => self.read_digit(),
+            x if x == "=" && self.peak_char() == "=" => {
+                self.read_char();
+                self.read_char();
+                format!("{}{}", x, "=")
+            },
+            x if x == "!" && self.peak_char() == "=" => {
+                self.read_char();
+                self.read_char();
+                format!("{}{}", x, "=")
+            },
             x => {
                 self.read_char();
                 x.clone()
@@ -167,6 +183,38 @@ mod tests {
             (token::TokenType::FALSE, "false"),
             (token::TokenType::SEMICOLON, ";"),
             (token::TokenType::RBRACE, "}"),
+            (token::TokenType::EOF, "")
+        ];
+
+        for expect in expects.iter() {
+            let t = l.next_token();
+            assert_eq!(t.token_type, expect.0);
+            assert_eq!(t.literal, expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_analysis_comparison_operator() {
+        let mut l = new("
+            if (10 == 10) 
+            if (5 != 10) 
+        ");
+
+        let expects = [
+            (token::TokenType::IF, "if"),
+            (token::TokenType::LPAREN, "("),
+            (token::TokenType::INT("10".to_string()), "10"),
+            (token::TokenType::EQ, "=="),
+            (token::TokenType::INT("10".to_string()), "10"),
+            (token::TokenType::RPAREN, ")"),
+
+            (token::TokenType::IF, "if"),
+            (token::TokenType::LPAREN, "("),
+            (token::TokenType::INT("5".to_string()), "5"),
+            (token::TokenType::NOTEQ, "!="),
+            (token::TokenType::INT("10".to_string()), "10"),
+            (token::TokenType::RPAREN, ")"),
+
             (token::TokenType::EOF, "")
         ];
 
