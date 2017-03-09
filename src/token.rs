@@ -1,4 +1,4 @@
-use lexer::is_digit;
+use lexer::{is_digit, is_letter};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
@@ -8,6 +8,12 @@ pub enum TokenType {
     INT(String),
     ASSIGN,
     PLUS,
+    MINUS,
+    MULTIPLY,
+    DIVIDE,
+    LT,
+    GT,
+    BANG,
     COMMA,
     SEMICOLON,
     LPAREN,
@@ -16,6 +22,11 @@ pub enum TokenType {
     RBRACE,
     FUNCTION,
     LET,
+    TRUE,
+    FALSE,
+    IF,
+    ELSE,
+    RETURN,
 }
 
 impl TokenType {
@@ -23,6 +34,12 @@ impl TokenType {
         match s {
             "=" => TokenType::ASSIGN,
             "+" => TokenType::PLUS,
+            "-" => TokenType::MINUS,
+            "*" => TokenType::MULTIPLY,
+            "/" => TokenType::DIVIDE,
+            "!" => TokenType::BANG,
+            "<" => TokenType::LT,
+            ">" => TokenType::GT,
             "," => TokenType::COMMA,
             ";" => TokenType::SEMICOLON,
             "(" => TokenType::LPAREN,
@@ -31,9 +48,15 @@ impl TokenType {
             "}" => TokenType::RBRACE,
             "let" => TokenType::LET,
             "fn" => TokenType::FUNCTION,
+            "true" => TokenType::TRUE,
+            "false" => TokenType::FALSE,
+            "if" => TokenType::IF,
+            "else" => TokenType::ELSE,
+            "return" => TokenType::RETURN,
             "" => TokenType::EOF,
             n if is_digit(&n.to_string()) => TokenType::INT(n.to_string()),
-            id => TokenType::IDENT(id.to_string()),
+            id if is_letter(&id.to_string()) => TokenType::IDENT(id.to_string()),
+            _ => TokenType::ILLEGAL
         }
     }
 
@@ -42,6 +65,12 @@ impl TokenType {
              TokenType::EOF => "",
              TokenType::ASSIGN => "=",
              TokenType::PLUS => "+",
+             TokenType::MINUS => "-",
+             TokenType::MULTIPLY => "*",
+             TokenType::DIVIDE => "/",
+             TokenType::BANG => "!",
+             TokenType::LT => "<",
+             TokenType::GT => ">",
              TokenType::COMMA => ",",
              TokenType::SEMICOLON => ";",
              TokenType::LPAREN => "(",
@@ -50,6 +79,11 @@ impl TokenType {
              TokenType::RBRACE => "}",
              TokenType::FUNCTION => "fn",
              TokenType::LET => "let",
+             TokenType::TRUE => "true",
+             TokenType::FALSE => "false",
+             TokenType::IF => "if",
+             TokenType::ELSE => "else",
+             TokenType::RETURN => "return",
              TokenType::INT(ref x) => x,
              TokenType::IDENT(ref x) => x,
              _ => "ILLEGAL",
@@ -62,9 +96,11 @@ pub struct Token {
     pub literal: String,
 }
 
-pub fn new(t: TokenType) -> Token {
+pub fn new(s: String) -> Token {
+    let tt = TokenType::from_str(s.as_str());
+
     Token {
-        token_type: t.clone(),
-        literal: t.to_str(),
+        token_type: tt.clone(),
+        literal: tt.to_str(),
     }
 }

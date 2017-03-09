@@ -32,11 +32,7 @@ impl<'a> Lexer<'a> {
                 x.clone()
             },
         };
-        token::new(
-            token::TokenType::from_str(
-                seed.as_str()
-            )
-        )
+        token::new(seed)
     }
 
     pub fn read_identifier(&mut self) -> String {
@@ -77,7 +73,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-fn is_letter(s: &String) -> bool {
+pub fn is_letter(s: &String) -> bool {
     &"a".to_string() <= s && s <= &"z".to_string() || &"A".to_string() <= s && s <= &"Z".to_string() || &"_".to_string() == s
 }
 
@@ -122,6 +118,63 @@ mod tests {
         assert!(!is_digit(&"_".to_string()));
         assert!(is_digit(&"0".to_string()));
         assert!(is_digit(&"9".to_string()));
+    }
+
+    #[test]
+    fn it_should_analysis_arithmetic() {
+        let mut l = new("!-*/<>");
+        let expects = [
+            (token::TokenType::BANG, "!"),
+            (token::TokenType::MINUS, "-"),
+            (token::TokenType::MULTIPLY, "*"),
+            (token::TokenType::DIVIDE, "/"),
+            (token::TokenType::LT, "<"),
+            (token::TokenType::GT, ">"),
+            (token::TokenType::EOF, "")
+        ];
+
+        for expect in expects.iter() {
+            let t = l.next_token();
+            assert_eq!(t.token_type, expect.0);
+            assert_eq!(t.literal, expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_analysis_control_syntax() {
+        let mut l = new("
+        if (5 < 10) {
+            return true;
+        } else {
+            return false;
+        }
+        ");
+        let expects = [
+            (token::TokenType::IF, "if"),
+            (token::TokenType::LPAREN, "("),
+            (token::TokenType::INT("5".to_string()), "5"),
+            (token::TokenType::LT, "<"),
+            (token::TokenType::INT("10".to_string()), "10"),
+            (token::TokenType::RPAREN, ")"),
+            (token::TokenType::LBRACE, "{"),
+            (token::TokenType::RETURN, "return"),
+            (token::TokenType::TRUE, "true"),
+            (token::TokenType::SEMICOLON, ";"),
+            (token::TokenType::RBRACE, "}"),
+            (token::TokenType::ELSE, "else"),
+            (token::TokenType::LBRACE, "{"),
+            (token::TokenType::RETURN, "return"),
+            (token::TokenType::FALSE, "false"),
+            (token::TokenType::SEMICOLON, ";"),
+            (token::TokenType::RBRACE, "}"),
+            (token::TokenType::EOF, "")
+        ];
+
+        for expect in expects.iter() {
+            let t = l.next_token();
+            assert_eq!(t.token_type, expect.0);
+            assert_eq!(t.literal, expect.1);
+        }
     }
 
     #[test]
