@@ -1,13 +1,22 @@
 use token;
 
-pub struct Lexer<'a> {
-    pub input: &'a str,
+pub struct Lexer {
+    pub input: String,
     pub current_char: String,
     pub position: u16,
     pub read_position: u16,
 }
 
-impl<'a> Lexer<'a> {
+impl Lexer {
+    pub fn next(&self) -> bool {
+        let position = self.position as usize;
+
+        match self.input.chars().nth(position) {
+            Some(_) => true,
+            None => false,
+        }
+    }
+
     fn read_char(&mut self) {
         let position = self.position as usize;
 
@@ -101,7 +110,7 @@ pub fn is_digit(s: &String) -> bool {
     }
 }
 
-pub fn new(input: &'static str) -> Lexer {
+pub fn new(input: String) -> Lexer {
     let mut l = Lexer {
         input: input,
         current_char: "".to_string(),
@@ -138,7 +147,7 @@ mod tests {
 
     #[test]
     fn it_should_analysis_arithmetic() {
-        let mut l = new("!-*/<>");
+        let mut l = new("!-*/<>".to_string());
         let expects = [
             (token::TokenType::BANG, "!"),
             (token::TokenType::MINUS, "-"),
@@ -164,7 +173,7 @@ mod tests {
         } else {
             return false;
         }
-        ");
+        ".to_string());
         let expects = [
             (token::TokenType::IF, "if"),
             (token::TokenType::LPAREN, "("),
@@ -198,7 +207,7 @@ mod tests {
         let mut l = new("
             if (10 == 10) 
             if (5 != 10) 
-        ");
+        ".to_string());
 
         let expects = [
             (token::TokenType::IF, "if"),
@@ -236,7 +245,7 @@ mod tests {
             };
 
             let result = add(five, ten);
-        ");
+        ".to_string());
         let expects = [
             (token::TokenType::LET, "let"),
             (token::TokenType::IDENT("five".to_string()), "five"),
