@@ -1,5 +1,6 @@
 use token;
 
+#[derive(Debug, Clone)]
 pub struct Lexer {
     pub input: String,
     pub current_char: String,
