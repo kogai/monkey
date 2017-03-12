@@ -13,8 +13,8 @@ pub trait Expression: Node {
 }
 
 #[derive(Debug)]
-pub struct Program<T: Statement> {
-  pub statements: Vec<T>,
+pub struct Program<S: Statement> {
+  pub statements: Vec<S>,
 }
 
 impl <T: Statement> Node for Program<T> {
@@ -27,10 +27,10 @@ impl <T: Statement> Node for Program<T> {
 }
 
 #[derive(Debug)]
-struct LetStatement<T: Expression> {
+struct LetStatement<E: Expression> {
     token: Token,
     name: Identifier,
-    value: T,
+    value: E,
 }
 
 impl <T: Expression> Node for LetStatement<T> {
