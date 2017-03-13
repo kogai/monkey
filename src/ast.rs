@@ -12,12 +12,11 @@ pub trait Expression: Node {
   fn expression_node(&self);
 }
 
-#[derive(Debug)]
-pub struct Program<S: Statement> {
-  pub statements: Vec<S>,
+pub struct Program {
+  pub statements: Vec<Box<Statement>>,
 }
 
-impl <T: Statement> Node for Program<T> {
+impl Node for Program {
     fn token_literal(&self) -> String {
       match self.statements.first() {
           Some(s) => s.token_literal(),
@@ -26,27 +25,26 @@ impl <T: Statement> Node for Program<T> {
     }
 }
 
-#[derive(Debug)]
-struct LetStatement<E: Expression> {
-    token: Token,
-    name: Identifier,
-    value: E,
+pub struct LetStatement {
+    pub token: Token,
+    pub name: Identifier,
+    pub value: Box<Expression>,
 }
 
-impl <T: Expression> Node for LetStatement<T> {
+impl Node for LetStatement {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
     }
 }
 
-impl <T: Expression> Statement for LetStatement<T> {
+impl Statement for LetStatement {
     fn statement_node(&self) {}
 }
 
 #[derive(Debug)]
-struct Identifier {
-    token: Token,
-    value: String,
+pub struct Identifier {
+    pub token: Token,
+    pub value: String,
 }
 
 impl Node for Identifier {
@@ -57,4 +55,16 @@ impl Node for Identifier {
 
 impl Expression for Identifier {
   fn expression_node(&self) {}
+}
+
+#[derive(Debug, PartialEq)]
+pub struct EmptyExpression {}
+impl Node for EmptyExpression {
+    fn token_literal(&self) -> String {
+        "empty".to_string()
+    }
+}
+
+impl Expression for EmptyExpression {
+    fn expression_node(&self) {}
 }

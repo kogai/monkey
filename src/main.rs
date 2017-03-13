@@ -5,5 +5,5 @@ mod ast;
 mod parser;
 
 fn main() {
-     repl::run();
+    repl::run();
 }
