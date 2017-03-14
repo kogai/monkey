@@ -28,9 +28,14 @@ impl Parser {
     unimplemented!();
   }
 
-  fn parse_statement<T>(&self) -> Option<LetStatement> {
+  fn parse_statement<T>(&mut self) -> Option<Box<Statement>> {
     match self.current_token.token_type {
-      TokenType::LET => self.parse_let_statement(),
+      TokenType::LET => {
+        match self.parse_let_statement() {
+            Some(x) => Some(Box::new(x)),
+            _ => None,
+        }
+      },
       _ => None,
     }
   }
