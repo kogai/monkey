@@ -15,20 +15,23 @@ impl Parser {
     self.peek_token = self.lexer.next_token();
   }
 
-  fn parse_program(&self) -> Program {
-    // p = Program {};
-    let statements: Vec<Box<Statement>> = vec![];
+  fn parse_program(&mut self) -> Program {
+    let mut statements: Vec<Box<Statement>> = vec![];
 
     while self.current_token.token_type != TokenType::EOF {
-      // let statement = self.parse_statement();
-      // statements.push(Box::new(statement));
-      unimplemented!();
+      let statement = self.parse_statement();
+      if statement.is_some() {
+        statements.push(statement.unwrap());
+      }
+      self.next_token();
     };
 
-    unimplemented!();
+    Program {
+      statements: statements,
+    }
   }
 
-  fn parse_statement<T>(&mut self) -> Option<Box<Statement>> {
+  fn parse_statement(&mut self) -> Option<Box<Statement>> {
     match self.current_token.token_type {
       TokenType::LET => {
         match self.parse_let_statement() {
@@ -138,7 +141,7 @@ mod tests {
       let foobar = 838383;
     ".to_string());
 
-    let parser = new(l);
+    let mut parser = new(l);
 
     // /*
     let program = parser.parse_program();
