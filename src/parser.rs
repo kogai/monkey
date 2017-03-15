@@ -1,7 +1,16 @@
 use std::mem;
 use token::{Token, TokenType};
 use lexer::Lexer;
-use ast::{Program, Statement, Expression, LetStatement, Identifier, EmptyExpression, Node};
+use ast::{
+  Program,
+  Statement,
+  Expression,
+  LetStatement,
+  ReturnStatement,
+  Identifier,
+  EmptyExpression,
+  Node
+};
 
 #[derive(Debug, Clone)]
 struct Parser {
@@ -41,7 +50,24 @@ impl Parser {
             _ => None,
         }
       },
+      TokenType::RETURN => Some(Box::new(self.parse_return_statement())),
       _ => None,
+    }
+  }
+
+  fn parse_return_statement(&mut self) -> ReturnStatement {
+    let current_token = self.current_token.clone();
+    let value = Box::new(EmptyExpression {});
+
+    self.next_token();
+    // ここにExpressionの解析が入る
+    while !self.current_token_is(TokenType::SEMICOLON) {
+      self.next_token();
+    };
+
+    ReturnStatement {
+      token: current_token,
+      return_value: value,
     }
   }
 
@@ -191,7 +217,7 @@ mod tests {
     ".to_string());
 
     let mut parser = new(l);
-    let program = parser.parse_program();
+    parser.parse_program();
     let errors_count = parser.errors.len();
 
     assert_eq!(errors_count, 3);
@@ -203,6 +229,30 @@ mod tests {
 
     for i in 0..errors_count {
       assert_eq!(&parser.errors[i], &expects[i]);
+    }
+  }
+
+  #[test]
+  fn it_should_parse_return_statemtn() {
+    let l = lexer::new("
+      return 5;
+      return 10;
+      return 993322;
+    ".to_string());
+
+    let mut parser = new(l);
+    let program = parser.parse_program();
+    let statements = program.statements;
+    let statements_count = statements.len();
+
+    assert_eq!(statements_count, 3);
+
+    for i in 0..statements_count {
+      let statement = unsafe {
+        mem::transmute::<&Box<Statement>, &Box<ReturnStatement>>(&statements[i])
+      };
+
+      assert_eq!(statement.token_literal(), "return");
     }
   }
 }
