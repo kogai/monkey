@@ -1,3 +1,4 @@
+use std::mem;
 use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, Statement, Expression, LetStatement, Identifier, EmptyExpression, Node};
@@ -131,6 +132,7 @@ mod tests {
 
     assert_eq!(parsed.token.token_type, TokenType::LET);
     assert_eq!(parsed.name.value, "x");
+    assert_eq!(parsed.value.token_literal(), "empty");
   }
 
   #[test]
@@ -142,26 +144,26 @@ mod tests {
     ".to_string());
 
     let mut parser = new(l);
-
-    // /*
     let program = parser.parse_program();
-    assert_eq!(program.statements.len(), 3);
+    let statements = program.statements;
+    let statements_count = statements.len();
+
+    assert_eq!(statements_count, 3);
 
     let expects = [
-      ("x", 0),
-      ("y", 1),
-      ("foobar", 2),
+      "x",
+      "y",
+      "foobar",
     ];
 
-    for expect in expects.iter() {
-      let i = expect.1;
-      // let s = program.statements[i];
-
-
-      // assert_eq!(s.token_literal(), "let");
-      // assert_eq!(s.name.value, expect.0);
-      // assert_eq!(s.name.token_literal(), expect.0);
+    for i in 0..statements_count {
+      let expect = expects[i];
+      unsafe {
+        let statement = mem::transmute::<&Box<Statement>, &LetStatement>(&statements[i]);
+        assert_eq!(statement.token_literal(), "let");
+        assert_eq!(statement.name.value, expect);
+        assert_eq!(statement.name.token_literal(), expect);
+      }
     }
-    // */
   }
 }
