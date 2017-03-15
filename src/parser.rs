@@ -158,12 +158,13 @@ mod tests {
 
     for i in 0..statements_count {
       let expect = expects[i];
-      unsafe {
-        let statement = mem::transmute::<&Box<Statement>, &LetStatement>(&statements[i]);
-        assert_eq!(statement.token_literal(), "let");
-        assert_eq!(statement.name.value, expect);
-        assert_eq!(statement.name.token_literal(), expect);
-      }
+      let statement = unsafe {
+        mem::transmute::<&Box<Statement>, &Box<LetStatement>>(&statements[i])
+      };
+
+      assert_eq!(statement.token_literal(), "let");
+      assert_eq!(statement.name.value, expect);
+      assert_eq!(statement.name.token_literal(), expect);
     }
   }
 }
