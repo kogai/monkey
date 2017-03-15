@@ -8,6 +8,7 @@ struct Parser {
   lexer: Lexer,
   current_token: Token,
   peek_token: Token,
+  errors: Vec<String>,
 }
 
 impl Parser {
@@ -83,11 +84,23 @@ impl Parser {
   }
 
   fn expect_peek_token(&mut self, t: TokenType) -> bool {
-    let is_expect_token = self.peek_token_is(t);
-    if is_expect_token {
-      self.next_token();
-    };
-    is_expect_token
+    let tok = t.clone();
+    match self.peek_token_is(t) {
+        true => {
+          self.next_token();
+          true
+        },
+        false => {
+          self.peek_error(tok);
+          false
+        },
+    }
+  }
+
+  fn peek_error(&mut self, t: TokenType) {
+    self.errors.push(
+      format!("expected next token to be {:?}, got {:?} instead", t, self.peek_token.token_type)
+    );
   }
 }
 
@@ -98,6 +111,7 @@ fn new(mut lexer: Lexer) -> Parser {
     lexer: lexer,
     current_token: first,
     peek_token: second,
+    errors: vec![],
   }
 }
 
@@ -165,6 +179,30 @@ mod tests {
       assert_eq!(statement.token_literal(), "let");
       assert_eq!(statement.name.value, expect);
       assert_eq!(statement.name.token_literal(), expect);
+    }
+  }
+
+  #[test]
+  fn it_should_peek_error_syntax() {
+    let l = lexer::new("
+      let x 5;
+      let = 10;
+      let 838383;
+    ".to_string());
+
+    let mut parser = new(l);
+    let program = parser.parse_program();
+    let errors_count = parser.errors.len();
+
+    assert_eq!(errors_count, 3);
+    let expects = [
+      "expected next token to be ASSIGN, got INT(\"5\") instead",
+      "expected next token to be IDENT(\"=\"), got ASSIGN instead",
+      "expected next token to be IDENT(\"838383\"), got INT(\"838383\") instead",
+    ];
+
+    for i in 0..errors_count {
+      assert_eq!(&parser.errors[i], &expects[i]);
     }
   }
 }
