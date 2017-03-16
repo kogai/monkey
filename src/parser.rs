@@ -7,10 +7,22 @@ use ast::{
   Expression,
   LetStatement,
   ReturnStatement,
+  ExpressionStatement,
   Identifier,
   EmptyExpression,
-  Node
+  Node,
 };
+
+#[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
+enum Precedence {
+    LOWEST,
+    EQUALS,
+    LESSGREATER,
+    SUM,
+    PRODUCT,
+    PREFIX,
+    CALL,
+}
 
 #[derive(Debug, Clone)]
 struct Parser {
@@ -51,8 +63,41 @@ impl Parser {
         }
       },
       TokenType::RETURN => Some(Box::new(self.parse_return_statement())),
-      _ => None,
+      _ => Some(Box::new(self.parse_expression_statement())),
     }
+  }
+
+  fn parse_expression_statement(&mut self) -> ExpressionStatement {
+    let current_token = self.current_token.clone();
+    let expression = self.parse_expression(Precedence::LOWEST);
+
+    if self.peek_token_is(TokenType::SEMICOLON) {
+      self.next_token();
+    }
+
+    ExpressionStatement {
+      token: current_token,
+      expression: expression,
+    }
+  }
+
+  fn parse_expression(&self, precedence: Precedence) -> Box<Expression> {
+    let token_type = self.current_token.token_type.clone();
+    self.parse_prefix(token_type)
+  }
+
+  fn parse_prefix(&self, t: TokenType) -> Box<Expression> {
+    match t {
+        TokenType::IDENT(_) => self.parse_identifier(),
+        _ => Box::new(EmptyExpression{}),
+    }
+  }
+
+  fn parse_identifier(&self) -> Box<Expression> {
+    Box::new(Identifier{
+      token: self.current_token.clone(),
+      value: self.current_token.literal.clone(),
+    })
   }
 
   fn parse_return_statement(&mut self) -> ReturnStatement {
@@ -87,18 +132,19 @@ impl Parser {
     if !self.expect_peek_token(TokenType::ASSIGN) {
       return None
     }
+    
+    self.next_token();
+    // ここにExpressionの解析が入る
 
     if !self.current_token_is(TokenType::SEMICOLON) {
       self.next_token();
     }
 
-    let stmt = LetStatement {
+    Some(LetStatement {
       name: name,
       token: current_token,
       value: Box::new(EmptyExpression {}),
-    };
-
-    Some(stmt)
+    })
   }
 
   fn current_token_is(&self, t: TokenType) -> bool {
@@ -254,5 +300,27 @@ mod tests {
 
       assert_eq!(statement.token_literal(), "return");
     }
+  }
+
+  #[test]
+  fn it_should_parse_expression_statement() {
+    let l = lexer::new("
+      foobar;
+    ".to_string());
+
+    let mut parser = new(l);
+    let program = parser.parse_program();
+    let statements = program.statements;
+    let statements_count = statements.len();
+
+    assert_eq!(statements_count, 1);
+    let statement = unsafe {
+      mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
+    };
+
+    let identifier = unsafe {
+      mem::transmute::<&Box<Expression>, &Box<Identifier>>(&statement.expression)
+    };
+    assert_eq!(identifier.token_literal(), "foobar");
   }
 }
