@@ -98,3 +98,19 @@ impl Node for ExpressionStatement {
 impl Statement for ExpressionStatement {
     fn statement_node(&self) {}
 }
+
+#[derive(Debug)]
+pub struct IntegerLiteral {
+    pub token: Token,
+    pub value: usize,
+}
+
+impl Node for IntegerLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+impl Expression for IntegerLiteral {
+    fn expression_node(&self) {}
+}

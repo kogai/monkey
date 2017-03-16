@@ -1,4 +1,6 @@
 use std::mem;
+use std::str::FromStr;
+
 use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{
@@ -11,6 +13,7 @@ use ast::{
   Identifier,
   EmptyExpression,
   Node,
+  IntegerLiteral,
 };
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
@@ -81,23 +84,42 @@ impl Parser {
     }
   }
 
-  fn parse_expression(&self, precedence: Precedence) -> Box<Expression> {
+  fn parse_expression(&mut self, precedence: Precedence) -> Box<Expression> {
     let token_type = self.current_token.token_type.clone();
     self.parse_prefix(token_type)
   }
 
-  fn parse_prefix(&self, t: TokenType) -> Box<Expression> {
+  fn parse_prefix(&mut self, t: TokenType) -> Box<Expression> {
     match t {
         TokenType::IDENT(_) => self.parse_identifier(),
+        TokenType::INT(_) => self.parse_integer_literal().unwrap_or(Box::new(EmptyExpression{})),
         _ => Box::new(EmptyExpression{}),
     }
   }
 
-  fn parse_identifier(&self) -> Box<Expression> {
+  fn parse_identifier(&mut self) -> Box<Expression> {
     Box::new(Identifier{
       token: self.current_token.clone(),
       value: self.current_token.literal.clone(),
     })
+  }
+
+  fn parse_integer_literal(&mut self) -> Option<Box<Expression>> {
+    let current_token = self.current_token.clone();
+    let value = usize::from_str(
+      self.current_token.literal.as_str().clone()
+    );
+
+    match value {
+        Ok(s) => Some(Box::new(IntegerLiteral {
+          token: current_token,
+          value: s,
+        })),
+        Err(e) => {
+          self.errors.push(format!("could not parse {:?} as integer", current_token));
+          None
+        },
+    }
   }
 
   fn parse_return_statement(&mut self) -> ReturnStatement {
@@ -304,9 +326,7 @@ mod tests {
 
   #[test]
   fn it_should_parse_expression_statement() {
-    let l = lexer::new("
-      foobar;
-    ".to_string());
+    let l = lexer::new("foobar;".to_string());
 
     let mut parser = new(l);
     let program = parser.parse_program();
@@ -321,6 +341,28 @@ mod tests {
     let identifier = unsafe {
       mem::transmute::<&Box<Expression>, &Box<Identifier>>(&statement.expression)
     };
+    assert_eq!(identifier.value, "foobar");
     assert_eq!(identifier.token_literal(), "foobar");
+  }
+
+  #[test]
+  fn it_should_parse_integer_literal_expression() {
+    let l = lexer::new("5;".to_string());
+
+    let mut parser = new(l);
+    let program = parser.parse_program();
+    let statements = program.statements;
+    let statements_count = statements.len();
+
+    assert_eq!(statements_count, 1);
+    let statement = unsafe {
+      mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
+    };
+
+    let identifier = unsafe {
+      mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&statement.expression)
+    };
+    assert_eq!(identifier.value, 5);
+    assert_eq!(identifier.token_literal(), "5");
   }
 }
