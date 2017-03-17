@@ -114,3 +114,19 @@ impl Node for IntegerLiteral {
 impl Expression for IntegerLiteral {
     fn expression_node(&self) {}
 }
+
+pub struct PrefixExpression {
+    pub token: Token,
+    pub operator: String,
+    pub right: Box<Expression>,
+}
+
+impl Node for PrefixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+impl Expression for PrefixExpression {
+    fn expression_node(&self) {}
+}

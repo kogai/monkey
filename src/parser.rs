@@ -11,6 +11,7 @@ use ast::{
   ReturnStatement,
   ExpressionStatement,
   Identifier,
+  PrefixExpression,
   EmptyExpression,
   Node,
   IntegerLiteral,
@@ -93,8 +94,24 @@ impl Parser {
     match t {
         TokenType::IDENT(_) => self.parse_identifier(),
         TokenType::INT(_) => self.parse_integer_literal().unwrap_or(Box::new(EmptyExpression{})),
+        TokenType::BANG => self.parse_prefix_expression(),
+        TokenType::MINUS => self.parse_prefix_expression(),
         _ => Box::new(EmptyExpression{}),
     }
+  }
+
+  fn parse_prefix_expression(&mut self) -> Box<Expression> {
+      let current_token = self.current_token.clone();
+      let operator = self.current_token.literal.clone();
+
+      self.next_token();
+
+      let expression = self.parse_expression(Precedence::PREFIX);
+      Box::new(PrefixExpression {
+        token: current_token,
+        operator: operator,
+        right: expression,
+      })
   }
 
   fn parse_identifier(&mut self) -> Box<Expression> {
@@ -115,7 +132,7 @@ impl Parser {
           token: current_token,
           value: s,
         })),
-        Err(e) => {
+        Err(_) => {
           self.errors.push(format!("could not parse {:?} as integer", current_token));
           None
         },
@@ -364,5 +381,36 @@ mod tests {
     };
     assert_eq!(identifier.value, 5);
     assert_eq!(identifier.token_literal(), "5");
+  }
+
+  #[test]
+  fn it_should_parse_prefix_expression() {
+      let expects = [
+        ("!5;", "!", 5, "5"),
+        ("-15;", "-", 15, "15"),
+      ];
+
+      for expect in expects.iter() {
+          let l = lexer::new(expect.0.to_string());
+
+          let mut parser = new(l);
+          let program = parser.parse_program();
+          let statements = program.statements;
+          let statements_count = statements.len();
+
+          assert_eq!(statements_count, 1);
+          let statement = unsafe {
+            mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
+          };
+          let prefix = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<PrefixExpression>>(&statement.expression)
+          };
+          assert_eq!(prefix.operator, expect.1);
+          let integer = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&prefix.right)
+          };
+          assert_eq!(integer.value, expect.2);
+          assert_eq!(integer.token_literal(), expect.3);
+      }
   }
 }
