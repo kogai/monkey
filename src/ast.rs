@@ -1,3 +1,4 @@
+use std::clone::Clone;
 use token::Token;
 
 pub trait Node {
@@ -11,6 +12,10 @@ pub trait Statement: Node {
 pub trait Expression: Node {
     fn expression_node(&self);
 }
+
+// impl<T: Expression> Clone for T {
+//     // fn sleep(&self) {self.sleep_in_bed()}
+// }
 
 pub struct Program {
     pub statements: Vec<Box<Statement>>,
@@ -131,3 +136,19 @@ impl Expression for PrefixExpression {
     fn expression_node(&self) {}
 }
 
+pub struct InfixExpression {
+    pub token: Token,
+    pub operator: String,
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
+}
+
+impl Node for InfixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+impl Expression for InfixExpression {
+    fn expression_node(&self) {}
+}

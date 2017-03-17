@@ -4,7 +4,7 @@ use std::str::FromStr;
 use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, Statement, Expression, LetStatement, ReturnStatement, ExpressionStatement,
-          Identifier, PrefixExpression, EmptyExpression, Node, IntegerLiteral};
+          Identifier, PrefixExpression, InfixExpression, EmptyExpression, Node, IntegerLiteral};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -15,6 +15,23 @@ enum Precedence {
     PRODUCT,
     PREFIX,
     CALL,
+}
+
+fn precendences(token: TokenType) -> Precedence {
+    use self::Precedence::*;
+    use self::TokenType::*;
+
+    match token {
+        EQ => EQUALS,
+        NOTEQ => EQUALS,
+        LT => LESSGREATER,
+        GT => LESSGREATER,
+        PLUS => SUM,
+        MINUS => SUM,
+        DIVIDE => PRODUCT,
+        MULTIPLY => PRODUCT,
+        _ => LOWEST,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +46,14 @@ impl Parser {
     fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
+    }
+
+    fn peek_precedence(&self) -> Precedence {
+        precendences(self.peek_token.token_type.clone())
+    }
+
+    fn current_precedence(&self) -> Precedence {
+        precendences(self.current_token.token_type.clone())
     }
 
     fn parse_program(&mut self) -> Program {
@@ -74,7 +99,21 @@ impl Parser {
 
     fn parse_expression(&mut self, precedence: Precedence) -> Box<Expression> {
         let token_type = self.current_token.token_type.clone();
-        self.parse_prefix(token_type)
+        let mut left = self.parse_prefix(token_type);
+
+        while !self.peek_token_is(TokenType::SEMICOLON) && precedence < self.peek_precedence() {
+            let token_type = self.peek_token.token_type.clone();
+            self.next_token();
+            let infix = self.parse_infix(token_type, left);
+            
+            if infix.is_none() {
+                // `left` is already borrowed.
+                //  How do i fix this with implements Clone to `Express` trait.
+                // return left;
+            };
+            left = infix.unwrap();
+        }
+        left
     }
 
     fn parse_prefix(&mut self, t: TokenType) -> Box<Expression> {
@@ -86,6 +125,21 @@ impl Parser {
             TokenType::BANG => self.parse_prefix_expression(),
             TokenType::MINUS => self.parse_prefix_expression(),
             _ => Box::new(EmptyExpression {}),
+        }
+    }
+
+    fn parse_infix(&mut self, t: TokenType, left: Box<Expression>) -> Option<Box<Expression>> {
+        use self::TokenType::*;
+        match t {
+            PLUS => Some(self.parse_infix_expression(left)),
+            MINUS => Some(self.parse_infix_expression(left)),
+            DIVIDE => Some(self.parse_infix_expression(left)),
+            MULTIPLY => Some(self.parse_infix_expression(left)),
+            EQ => Some(self.parse_infix_expression(left)),
+            NOTEQ => Some(self.parse_infix_expression(left)),
+            LT => Some(self.parse_infix_expression(left)),
+            GT => Some(self.parse_infix_expression(left)),
+            _ => None,
         }
     }
 
@@ -101,6 +155,21 @@ impl Parser {
                      operator: operator,
                      right: expression,
                  })
+    }
+
+    fn parse_infix_expression(&mut self, left: Box<Expression>) -> Box<Expression> {
+        let current_token = self.current_token.clone();
+        let operator = self.current_token.literal.clone();
+        let precendence = self.current_precedence();
+        self.next_token();
+        let right = self.parse_expression(precendence);
+
+        Box::new(InfixExpression {
+          token: current_token,
+          operator: operator,
+          left: left,
+          right: right,
+        })
     }
 
     fn parse_identifier(&mut self) -> Box<Expression> {
@@ -393,7 +462,41 @@ mod tests {
 
     #[test]
     fn it_should_parse_infix_expression() {
-        unimplemented!();
+        let expects = [
+          ("5 + 5;", 5, "+", 5),
+          ("5 - 5;", 5, "-", 5),
+          ("5 * 5;", 5, "*", 5),
+          ("5 / 5;", 5, "/", 5),
+          ("5 > 5;", 5, ">", 5),
+          ("5 < 5;", 5, "<", 5),
+          ("5 == 5;", 5, "==", 5),
+          ("5 != 5;", 5, "!=", 5),
+        ];
+
+        for expect in expects.iter() {
+            let l = lexer::new(expect.0.to_string());
+
+            let mut parser = new(l);
+            let program = parser.parse_program();
+            let statements = program.statements;
+            let statements_count = statements.len();
+
+            assert_eq!(statements_count, 1);
+            let statement = unsafe {
+                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
+            };
+            let expression = unsafe {
+                mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.expression)
+            };
+
+            let left =
+                unsafe { mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&expression.left) };
+            assert_eq!(left.value, expect.1);
+            assert_eq!(expression.operator, expect.2);
+            let right =
+                unsafe { mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&expression.right) };
+            assert_eq!(right.value, expect.3);
+        }
     }
 }
 
