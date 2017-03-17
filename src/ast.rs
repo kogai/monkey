@@ -1,27 +1,27 @@
 use token::Token;
 
 pub trait Node {
-  fn token_literal(&self) -> String;
+    fn token_literal(&self) -> String;
 }
 
 pub trait Statement: Node {
-  fn statement_node(&self);
+    fn statement_node(&self);
 }
 
 pub trait Expression: Node {
-  fn expression_node(&self);
+    fn expression_node(&self);
 }
 
 pub struct Program {
-  pub statements: Vec<Box<Statement>>,
+    pub statements: Vec<Box<Statement>>,
 }
 
 impl Node for Program {
     fn token_literal(&self) -> String {
-      match self.statements.first() {
-          Some(s) => s.token_literal(),
-          None => "".to_string(),
-      }
+        match self.statements.first() {
+            Some(s) => s.token_literal(),
+            None => "".to_string(),
+        }
     }
 }
 
@@ -69,7 +69,7 @@ impl Node for Identifier {
 }
 
 impl Expression for Identifier {
-  fn expression_node(&self) {}
+    fn expression_node(&self) {}
 }
 
 #[derive(Debug, PartialEq)]
@@ -130,3 +130,4 @@ impl Node for PrefixExpression {
 impl Expression for PrefixExpression {
     fn expression_node(&self) {}
 }
+

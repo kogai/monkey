@@ -60,41 +60,42 @@ impl TokenType {
             "!=" => TokenType::NOTEQ,
             n if is_digit(&n.to_string()) => TokenType::INT(n.to_string()),
             id if is_letter(&id.to_string()) => TokenType::IDENT(id.to_string()),
-            _ => TokenType::ILLEGAL
+            _ => TokenType::ILLEGAL,
         }
     }
 
     // このメソッドは要らない気がする
     pub fn to_str<'a>(&'a self) -> String {
-         (match *self {
-             TokenType::EOF => "",
-             TokenType::ASSIGN => "=",
-             TokenType::PLUS => "+",
-             TokenType::MINUS => "-",
-             TokenType::MULTIPLY => "*",
-             TokenType::DIVIDE => "/",
-             TokenType::BANG => "!",
-             TokenType::LT => "<",
-             TokenType::GT => ">",
-             TokenType::COMMA => ",",
-             TokenType::SEMICOLON => ";",
-             TokenType::LPAREN => "(",
-             TokenType::RPAREN => ")",
-             TokenType::LBRACE => "{",
-             TokenType::RBRACE => "}",
-             TokenType::FUNCTION => "fn",
-             TokenType::LET => "let",
-             TokenType::TRUE => "true",
-             TokenType::FALSE => "false",
-             TokenType::IF => "if",
-             TokenType::ELSE => "else",
-             TokenType::RETURN => "return",
-             TokenType::EQ => "==",
-             TokenType::NOTEQ => "!=",
-             TokenType::INT(ref x) => x,
-             TokenType::IDENT(ref x) => x,
-             _ => "ILLEGAL",
-         }).to_string()
+        (match *self {
+                 TokenType::EOF => "",
+                 TokenType::ASSIGN => "=",
+                 TokenType::PLUS => "+",
+                 TokenType::MINUS => "-",
+                 TokenType::MULTIPLY => "*",
+                 TokenType::DIVIDE => "/",
+                 TokenType::BANG => "!",
+                 TokenType::LT => "<",
+                 TokenType::GT => ">",
+                 TokenType::COMMA => ",",
+                 TokenType::SEMICOLON => ";",
+                 TokenType::LPAREN => "(",
+                 TokenType::RPAREN => ")",
+                 TokenType::LBRACE => "{",
+                 TokenType::RBRACE => "}",
+                 TokenType::FUNCTION => "fn",
+                 TokenType::LET => "let",
+                 TokenType::TRUE => "true",
+                 TokenType::FALSE => "false",
+                 TokenType::IF => "if",
+                 TokenType::ELSE => "else",
+                 TokenType::RETURN => "return",
+                 TokenType::EQ => "==",
+                 TokenType::NOTEQ => "!=",
+                 TokenType::INT(ref x) => x,
+                 TokenType::IDENT(ref x) => x,
+                 _ => "ILLEGAL",
+             })
+            .to_string()
     }
 }
 
@@ -112,3 +113,4 @@ pub fn new(s: String) -> Token {
         literal: tt.to_str(),
     }
 }
+
