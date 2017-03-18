@@ -448,6 +448,26 @@ mod tests {
     }
 
     #[test]
+    fn it_should_parse_identifier_expression() {
+        let l = lexer::new("foobar;".to_string());
+
+        let mut parser = new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+
+        assert_eq!(statements_count, 1);
+        let statement =
+            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
+
+        let identifier = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&statement.expression)
+        };
+        assert_eq!(identifier.value, "foobar");
+        assert_eq!(identifier.token_literal(), "foobar");
+    }
+
+    #[test]
     fn it_should_parse_prefix_expression() {
         let expects = [("!5;", "!", 5, "5"), ("-15;", "-", 15, "15")];
 
