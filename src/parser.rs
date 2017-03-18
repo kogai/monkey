@@ -4,7 +4,7 @@ use std::str::FromStr;
 use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, Statement, Expression, LetStatement, ReturnStatement, ExpressionStatement,
-          Identifier, PrefixExpression, InfixExpression, EmptyExpression, Node, IntegerLiteral};
+          Identifier, PrefixExpression, InfixExpression, EmptyExpression, Node, IntegerLiteral, Boolean};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -131,15 +131,25 @@ impl Parser {
     }
 
     fn parse_prefix(&mut self, t: TokenType) -> Box<Expression> {
+        use self::TokenType::*;
         match t {
-            TokenType::IDENT(_) => self.parse_identifier(),
-            TokenType::INT(_) => {
+            IDENT(_) => self.parse_identifier(),
+            INT(_) => {
                 self.parse_integer_literal().unwrap_or(Box::new(EmptyExpression {}))
             }
-            TokenType::BANG => self.parse_prefix_expression(),
-            TokenType::MINUS => self.parse_prefix_expression(),
+            BANG => self.parse_prefix_expression(),
+            MINUS => self.parse_prefix_expression(),
+            TRUE => self.parse_boolean(),
+            FALSE => self.parse_boolean(),
             _ => Box::new(EmptyExpression {}),
         }
+    }
+
+    fn parse_boolean(&self) -> Box<Expression> {
+        Box::new(Boolean{
+            token: self.current_token.clone(),
+            value: self.current_token_is(TokenType::TRUE),
+        })
     }
 
     fn parse_infix(&mut self, t: TokenType, left: Box<Expression>) -> Box<Expression> {
@@ -465,6 +475,29 @@ mod tests {
         };
         assert_eq!(identifier.value, "foobar");
         assert_eq!(identifier.token_literal(), "foobar");
+    }
+
+    #[test]
+    fn it_should_parse_boolean_expression() {
+        let expects = [("true;", true), ("false;", false)];
+
+        for expect in expects.iter() {
+            let l = lexer::new(expect.0.to_string());
+
+            let mut parser = new(l);
+            let program = parser.parse_program();
+            let statements = program.statements;
+            let statements_count = statements.len();
+
+            assert_eq!(statements_count, 1);
+            let statement = unsafe {
+                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
+            };
+            let boolean = unsafe {
+                mem::transmute::<&Box<Expression>, &Box<Boolean>>(&statement.expression)
+            };
+            assert_eq!(boolean.value, expect.1);
+        }
     }
 
     #[test]
