@@ -3,6 +3,7 @@ use token::Token;
 
 pub trait Node {
     fn token_literal(&self) -> String;
+    fn string(&self) -> String;
 }
 
 pub trait Statement: Node {
@@ -24,6 +25,14 @@ impl Node for Program {
             None => "".to_string(),
         }
     }
+
+    fn string(&self) -> String {
+        let statemnts = &self.statements;
+
+        statemnts
+            .into_iter()
+            .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
+    }
 }
 
 pub struct LetStatement {
@@ -35,6 +44,10 @@ pub struct LetStatement {
 impl Node for LetStatement {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        format!("{} {} = {}", self.token_literal(), self.name.string(), self.value.string())
     }
 }
 
@@ -50,6 +63,10 @@ pub struct ReturnStatement {
 impl Node for ReturnStatement {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        format!("{} {};", self.token_literal(), self.return_value.string())
     }
 }
 
@@ -67,6 +84,10 @@ impl Node for Identifier {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
     }
+
+    fn string(&self) -> String {
+        format!("{}", self.value)
+    }
 }
 
 impl Expression for Identifier {
@@ -78,6 +99,10 @@ pub struct EmptyExpression {}
 impl Node for EmptyExpression {
     fn token_literal(&self) -> String {
         "empty".to_string()
+    }
+
+    fn string(&self) -> String {
+        format!("{}", self.token_literal())
     }
 }
 
@@ -93,6 +118,10 @@ pub struct ExpressionStatement {
 impl Node for ExpressionStatement {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        format!("{}", self.expression.string())
     }
 }
 
@@ -110,6 +139,10 @@ impl Node for IntegerLiteral {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
     }
+
+    fn string(&self) -> String {
+        format!("{}", self.value)
+    }
 }
 
 impl Expression for IntegerLiteral {
@@ -125,6 +158,10 @@ pub struct PrefixExpression {
 impl Node for PrefixExpression {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        format!("({}{})", self.operator, self.right.string())
     }
 }
 
@@ -143,6 +180,10 @@ impl Node for InfixExpression {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
     }
+
+    fn string(&self) -> String {
+        format!("({} {} {})", self.left.string(), self.operator, self.right.string())
+    }
 }
 
 impl Expression for InfixExpression {
@@ -158,6 +199,10 @@ pub struct Boolean {
 impl Node for Boolean {
     fn token_literal(&self) -> String {
         self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        format!("{}", self.value)
     }
 }
 

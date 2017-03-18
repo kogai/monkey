@@ -49,7 +49,6 @@ fn is_infix_operator(t: TokenType) -> bool {
     }
 }
 
-
 #[derive(Debug, Clone)]
 struct Parser {
     lexer: Lexer,
@@ -255,7 +254,7 @@ impl Parser {
         }
 
         self.next_token();
-        // ここにExpressionの解析が入る
+        // ここにExpressionの解析が入る？
 
         if !self.current_token_is(TokenType::SEMICOLON) {
             self.next_token();
@@ -565,5 +564,31 @@ mod tests {
             assert_eq!(right.value, expect.3);
         }
     }
-}
 
+    #[test]
+    fn it_should_parse_operator_with_precedence() {
+        let expects = [
+          ("-a * b", "((-a) * b)"),
+          ("!-a", "(!(-a))"),
+          ("a + b + c", "((a + b) + c)"),
+          ("a + b - c", "((a + b) - c)"),
+          ("a * b * c", "((a * b) * c)"),
+          ("a * b / c", "((a * b) / c)"),
+          ("a + b / c", "(a + (b / c))"),
+          ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+          ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+          ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+          ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+          ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+        ];
+
+        for expect in expects.iter() {
+            let l = lexer::new(expect.0.to_string());
+
+            let mut parser = new(l);
+            let program = parser.parse_program();
+            let actual = program.string();
+            assert_eq!(actual, expect.1);
+        }
+    }
+}
