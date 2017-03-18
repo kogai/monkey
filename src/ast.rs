@@ -13,10 +13,6 @@ pub trait Expression: Node {
     fn expression_node(&self);
 }
 
-// impl<T: Expression> Clone for T {
-//     // fn sleep(&self) {self.sleep_in_bed()}
-// }
-
 pub struct Program {
     pub statements: Vec<Box<Statement>>,
 }

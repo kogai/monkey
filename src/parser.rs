@@ -34,6 +34,22 @@ fn precendences(token: TokenType) -> Precedence {
     }
 }
 
+fn is_infix_operator(t: TokenType) -> bool {
+    use self::TokenType::*;
+    match t {
+        PLUS =>true,
+        MINUS =>true,
+        DIVIDE =>true,
+        MULTIPLY =>true,
+        EQ =>true,
+        NOTEQ =>true,
+        LT =>true,
+        GT =>true,
+        _ => false,
+    }
+}
+
+
 #[derive(Debug, Clone)]
 struct Parser {
     lexer: Lexer,
@@ -104,14 +120,12 @@ impl Parser {
         while !self.peek_token_is(TokenType::SEMICOLON) && precedence < self.peek_precedence() {
             let token_type = self.peek_token.token_type.clone();
             self.next_token();
-            let infix = self.parse_infix(token_type, left);
-            
-            if infix.is_none() {
-                // `left` is already borrowed.
-                //  How do i fix this with implements Clone to `Express` trait.
-                // return left;
-            };
-            left = infix.unwrap();
+            let infix_expression = self.parse_infix(token_type.clone(), left);
+
+            if !is_infix_operator(token_type) {
+                return infix_expression;
+            }
+            left = infix_expression;
         }
         left
     }
@@ -128,18 +142,18 @@ impl Parser {
         }
     }
 
-    fn parse_infix(&mut self, t: TokenType, left: Box<Expression>) -> Option<Box<Expression>> {
+    fn parse_infix(&mut self, t: TokenType, left: Box<Expression>) -> Box<Expression> {
         use self::TokenType::*;
         match t {
-            PLUS => Some(self.parse_infix_expression(left)),
-            MINUS => Some(self.parse_infix_expression(left)),
-            DIVIDE => Some(self.parse_infix_expression(left)),
-            MULTIPLY => Some(self.parse_infix_expression(left)),
-            EQ => Some(self.parse_infix_expression(left)),
-            NOTEQ => Some(self.parse_infix_expression(left)),
-            LT => Some(self.parse_infix_expression(left)),
-            GT => Some(self.parse_infix_expression(left)),
-            _ => None,
+            PLUS =>self.parse_infix_expression(left),
+            MINUS =>self.parse_infix_expression(left),
+            DIVIDE =>self.parse_infix_expression(left),
+            MULTIPLY =>self.parse_infix_expression(left),
+            EQ =>self.parse_infix_expression(left),
+            NOTEQ =>self.parse_infix_expression(left),
+            LT =>self.parse_infix_expression(left),
+            GT =>self.parse_infix_expression(left),
+            _ => left,
         }
     }
 
