@@ -140,6 +140,7 @@ impl Parser {
             MINUS => self.parse_prefix_expression(),
             TRUE => self.parse_boolean(),
             FALSE => self.parse_boolean(),
+            LPAREN => self.parse_group_expression(),
             _ => Box::new(EmptyExpression {}),
         }
     }
@@ -265,6 +266,15 @@ impl Parser {
                  token: current_token,
                  value: Box::new(EmptyExpression {}),
              })
+    }
+
+    fn parse_group_expression(&mut self) -> Box<Expression> {
+        self.next_token();
+        let expression = self.parse_expression(Precedence::LOWEST);
+        match self.expect_peek_token(TokenType::RPAREN) {
+            true => expression,
+            false => Box::new(EmptyExpression{}),
+        }
     }
 
     fn current_token_is(&self, t: TokenType) -> bool {
@@ -647,6 +657,11 @@ mod tests {
           ("false", "false"),
           ("3 > 5 == false", "((3 > 5) == false)"),
           ("3 < 5 == true", "((3 < 5) == true)"),
+          ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+          ("(5 + 5) * 2", "((5 + 5) * 2)"),
+          ("2 / (5 + 5)", "(2 / (5 + 5))"),
+          ("-(5 + 5)", "(-(5 + 5))"),
+          ("!(true == true)", "(!(true == true))"),
         ];
 
         for expect in expects.iter() {
