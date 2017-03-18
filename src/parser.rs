@@ -527,6 +527,35 @@ mod tests {
     }
 
     #[test]
+    fn it_should_parse_prefix_expression_with_boolean() {
+        let expects = [
+            ("!true;", "!", true),
+            ("!false;", "!", false),
+        ];
+
+        for expect in expects.iter() {
+            let l = lexer::new(expect.0.to_string());
+
+            let mut parser = new(l);
+            let program = parser.parse_program();
+            let statements = program.statements;
+            let statements_count = statements.len();
+
+            assert_eq!(statements_count, 1);
+            let statement = unsafe {
+                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
+            };
+            let prefix = unsafe {
+                mem::transmute::<&Box<Expression>, &Box<PrefixExpression>>(&statement.expression)
+            };
+            assert_eq!(prefix.operator, expect.1);
+            let integer =
+                unsafe { mem::transmute::<&Box<Expression>, &Box<Boolean>>(&prefix.right) };
+            assert_eq!(integer.value, expect.2);
+        }
+    }
+
+    #[test]
     fn it_should_parse_infix_expression() {
         let expects = [
           ("5 + 5;", 5, "+", 5),
@@ -566,6 +595,40 @@ mod tests {
     }
 
     #[test]
+    fn it_should_parse_infix_expression_with_boolean() {
+        let expects = [
+          ("true == true;", true, "==", true),
+          ("true != false;", true, "!=", false),
+          ("false == false;", false, "==", false),
+        ];
+
+        for expect in expects.iter() {
+            let l = lexer::new(expect.0.to_string());
+
+            let mut parser = new(l);
+            let program = parser.parse_program();
+            let statements = program.statements;
+            let statements_count = statements.len();
+
+            assert_eq!(statements_count, 1);
+            let statement = unsafe {
+                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
+            };
+            let expression = unsafe {
+                mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.expression)
+            };
+
+            let left =
+                unsafe { mem::transmute::<&Box<Expression>, &Box<Boolean>>(&expression.left) };
+            assert_eq!(left.value, expect.1);
+            assert_eq!(expression.operator, expect.2);
+            let right =
+                unsafe { mem::transmute::<&Box<Expression>, &Box<Boolean>>(&expression.right) };
+            assert_eq!(right.value, expect.3);
+        }
+    }
+
+    #[test]
     fn it_should_parse_operator_with_precedence() {
         let expects = [
           ("-a * b", "((-a) * b)"),
@@ -580,6 +643,10 @@ mod tests {
           ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
           ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
           ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+          ("true", "true"),
+          ("false", "false"),
+          ("3 > 5 == false", "((3 > 5) == false)"),
+          ("3 < 5 == true", "((3 < 5) == true)"),
         ];
 
         for expect in expects.iter() {
