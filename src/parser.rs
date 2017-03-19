@@ -330,11 +330,10 @@ impl Parser {
 
     fn parse_return_statement(&mut self) -> ReturnStatement {
         let current_token = self.current_token.clone();
-        let value = Box::new(EmptyExpression {});
-
         self.next_token();
-        // ここにExpressionの解析が入る?
-        while !self.current_token_is(TokenType::SEMICOLON) {
+        let value = self.parse_expression(Precedence::LOWEST);
+
+        if self.peek_token_is(TokenType::SEMICOLON) {
             self.next_token();
         }
 
@@ -358,16 +357,16 @@ impl Parser {
         self.expect_peek_token(TokenType::ASSIGN);
 
         self.next_token();
-        // ここにExpressionの解析が入る？
+        let value = self.parse_expression(Precedence::LOWEST);
 
-        if !self.current_token_is(TokenType::SEMICOLON) {
+        if self.peek_token_is(TokenType::SEMICOLON) {
             self.next_token();
         }
 
         LetStatement {
             name: name,
             token: current_token,
-            value: Box::new(EmptyExpression {}),
+            value: value,
         }
     }
 
@@ -445,13 +444,19 @@ mod tests {
 
     #[test]
     fn it_should_parse_let_statement() {
-        let l = lexer::new("let x = 5;".to_string());
-        let mut parser = new(l);
-        let parsed = parser.parse_let_statement();
+        let expects = [("let x = 5;", "x", "5"),
+                       ("let y = true;", "y", "true"),
+                       ("let foobar = y;", "foobar", "y")];
 
-        assert_eq!(parsed.token.token_type, TokenType::LET);
-        assert_eq!(parsed.name.value, "x");
-        assert_eq!(parsed.value.token_literal(), "empty");
+        for expect in expects.iter() {
+            let l = lexer::new(expect.0.to_string());
+            let mut parser = new(l);
+            let parsed = parser.parse_let_statement();
+
+            assert_eq!(parsed.token.token_type, TokenType::LET);
+            assert_eq!(parsed.name.value, expect.1);
+            assert_eq!(parsed.value.token_literal(), expect.2);
+        }
     }
 
     #[test]
@@ -509,25 +514,17 @@ mod tests {
 
     #[test]
     fn it_should_parse_return_statemtn() {
-        let l = lexer::new("
-      return 5;
-      return 10;
-      return 993322;
-    "
-                                   .to_string());
+        let expects = [("return 5;", "5"), ("return 10;", "10"), ("return 993322;", "993322")];
 
-        let mut parser = new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
-
-        assert_eq!(statements_count, 3);
-
-        for i in 0..statements_count {
+        for expect in expects.iter() {
+            let l = lexer::new(expect.0.to_string());
+            let mut parser = new(l);
+            let program = parser.parse_program();
+            let statements = program.statements;
             let statement =
-                unsafe { mem::transmute::<&Box<Statement>, &Box<ReturnStatement>>(&statements[i]) };
-
+                unsafe { mem::transmute::<&Box<Statement>, &Box<ReturnStatement>>(&statements[0]) };
             assert_eq!(statement.token_literal(), "return");
+            assert_eq!(statement.return_value.string(), expect.1);
         }
     }
 
