@@ -78,25 +78,18 @@ impl Parser {
 
         while self.current_token.token_type != TokenType::EOF {
             let statement = self.parse_statement();
-            if statement.is_some() {
-                statements.push(statement.unwrap());
-            }
+            statements.push(statement);
             self.next_token();
         }
 
         Program { statements: statements }
     }
 
-    fn parse_statement(&mut self) -> Option<Box<Statement>> {
+    fn parse_statement(&mut self) -> Box<Statement> {
         match self.current_token.token_type {
-            TokenType::LET => {
-                match self.parse_let_statement() {
-                    Some(x) => Some(Box::new(x)),
-                    _ => None,
-                }
-            }
-            TokenType::RETURN => Some(Box::new(self.parse_return_statement())),
-            _ => Some(Box::new(self.parse_expression_statement())),
+            TokenType::LET => Box::new(self.parse_let_statement()),
+            TokenType::RETURN => Box::new(self.parse_return_statement()),
+            _ => Box::new(self.parse_expression_statement()),
         }
     }
 
@@ -226,9 +219,7 @@ impl Parser {
 
         while !self.current_token_is(TokenType::RBRACE) {
             let statement = self.parse_statement();
-            if statement.is_some() {
-                statements.push(statement.unwrap());
-            }
+            statements.push(statement);
             self.next_token();
         }
 
@@ -342,7 +333,7 @@ impl Parser {
         let value = Box::new(EmptyExpression {});
 
         self.next_token();
-        // ここにExpressionの解析が入る
+        // ここにExpressionの解析が入る?
         while !self.current_token_is(TokenType::SEMICOLON) {
             self.next_token();
         }
@@ -353,22 +344,18 @@ impl Parser {
         }
     }
 
-    fn parse_let_statement(&mut self) -> Option<LetStatement> {
+    fn parse_let_statement(&mut self) -> LetStatement {
         let current_token = self.current_token.clone();
         let ident = self.peek_token.literal.clone();
 
-        if !self.expect_peek_token(TokenType::IDENT(ident)) {
-            return None;
-        }
+        self.expect_peek_token(TokenType::IDENT(ident));
 
         let name = Identifier {
             token: self.current_token.clone(),
             value: self.current_token.literal.clone(),
         };
 
-        if !self.expect_peek_token(TokenType::ASSIGN) {
-            return None;
-        }
+        self.expect_peek_token(TokenType::ASSIGN);
 
         self.next_token();
         // ここにExpressionの解析が入る？
@@ -377,11 +364,11 @@ impl Parser {
             self.next_token();
         }
 
-        Some(LetStatement {
-                 name: name,
-                 token: current_token,
-                 value: Box::new(EmptyExpression {}),
-             })
+        LetStatement {
+            name: name,
+            token: current_token,
+            value: Box::new(EmptyExpression {}),
+        }
     }
 
     fn parse_group_expression(&mut self) -> Box<Expression> {
@@ -460,7 +447,7 @@ mod tests {
     fn it_should_parse_let_statement() {
         let l = lexer::new("let x = 5;".to_string());
         let mut parser = new(l);
-        let parsed = parser.parse_let_statement().unwrap();
+        let parsed = parser.parse_let_statement();
 
         assert_eq!(parsed.token.token_type, TokenType::LET);
         assert_eq!(parsed.name.value, "x");
@@ -509,10 +496,11 @@ mod tests {
         parser.parse_program();
         let errors_count = parser.errors.len();
 
-        assert_eq!(errors_count, 3);
+        assert_eq!(errors_count, 4);
         let expects = ["expected next token to be ASSIGN, got INT(\"5\") instead",
                        "expected next token to be IDENT(\"=\"), got ASSIGN instead",
-                       "expected next token to be IDENT(\"838383\"), got INT(\"838383\") instead"];
+                       "expected next token to be IDENT(\"838383\"), got INT(\"838383\") instead",
+                       "expected next token to be ASSIGN, got INT(\"838383\") instead"];
 
         for i in 0..errors_count {
             assert_eq!(&parser.errors[i], &expects[i]);
