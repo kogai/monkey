@@ -29,8 +29,7 @@ impl Node for Program {
     fn string(&self) -> String {
         let statemnts = &self.statements;
 
-        statemnts
-            .into_iter()
+        statemnts.into_iter()
             .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
     }
 }
@@ -47,8 +46,7 @@ impl Node for BlockStatement {
 
     fn string(&self) -> String {
         let statemnts = &self.statements;
-        statemnts
-            .into_iter()
+        statemnts.into_iter()
             .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
     }
 }
@@ -69,7 +67,10 @@ impl Node for LetStatement {
     }
 
     fn string(&self) -> String {
-        format!("{} {} = {}", self.token_literal(), self.name.string(), self.value.string())
+        format!("{} {} = {}",
+                self.token_literal(),
+                self.name.string(),
+                self.value.string())
     }
 }
 
@@ -204,7 +205,10 @@ impl Node for InfixExpression {
     }
 
     fn string(&self) -> String {
-        format!("({} {} {})", self.left.string(), self.operator, self.right.string())
+        format!("({} {} {})",
+                self.left.string(),
+                self.operator,
+                self.right.string())
     }
 }
 
@@ -246,8 +250,17 @@ impl Node for IfExpression {
 
     fn string(&self) -> String {
         match self.alternative {
-            Some(ref x) => format!("if {} {} else {}", self.condition.string(), self.consequence.string(), x.string()),
-            None => format!("if {} {}", self.condition.string(), self.consequence.string()),
+            Some(ref x) => {
+                format!("if {} {} else {}",
+                        self.condition.string(),
+                        self.consequence.string(),
+                        x.string())
+            }
+            None => {
+                format!("if {} {}",
+                        self.condition.string(),
+                        self.consequence.string())
+            }
         }
     }
 }
@@ -255,3 +268,4 @@ impl Node for IfExpression {
 impl Expression for IfExpression {
     fn expression_node(&self) {}
 }
+

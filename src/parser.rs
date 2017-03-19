@@ -166,16 +166,16 @@ impl Parser {
                 self.next_token();
                 self.expect_peek_token(TokenType::LBRACE);
                 Some(self.parse_block_statement())
-            },
+            }
             false => None,
         };
 
         Box::new(IfExpression {
-            token: token,
-            condition: condition,
-            consequence: consequence,
-            alternative: alternative,
-        })
+                     token: token,
+                     condition: condition,
+                     consequence: consequence,
+                     alternative: alternative,
+                 })
     }
 
     fn parse_block_statement(&mut self) -> BlockStatement {
@@ -189,7 +189,7 @@ impl Parser {
                 statements.push(statement.unwrap());
             }
             self.next_token();
-        };
+        }
 
         BlockStatement {
             token: token,
@@ -563,26 +563,28 @@ mod tests {
 
         let expression =
             unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
-        let statement =
-            unsafe { mem::transmute::<&Box<Expression>, &Box<IfExpression>>(&expression.expression) };
+        let statement = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<IfExpression>>(&expression.expression)
+        };
         let condition = unsafe {
             mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.condition)
         };
 
-        let left = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.left)
-        };
-        let right = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.right)
-        };
+        let left = unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.left) };
+        let right =
+            unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.right) };
 
         assert_eq!(left.value, "x");
         assert_eq!(condition.operator, "<");
         assert_eq!(right.value, "y");
 
         let consequence =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statement.consequence.statements[0]) };
-        assert_eq!(consequence.token.token_type, TokenType::IDENT("x".to_string()));
+            unsafe {
+                mem::transmute::<&Box<Statement>,
+                                 &Box<ExpressionStatement>>(&statement.consequence.statements[0])
+            };
+        assert_eq!(consequence.token.token_type,
+                   TokenType::IDENT("x".to_string()));
     }
 
     #[test]
@@ -596,30 +598,39 @@ mod tests {
 
         let expression =
             unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
-        let statement =
-            unsafe { mem::transmute::<&Box<Expression>, &Box<IfExpression>>(&expression.expression) };
+        let statement = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<IfExpression>>(&expression.expression)
+        };
         let condition = unsafe {
             mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.condition)
         };
 
-        let left = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.left)
-        };
-        let right = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.right)
-        };
+        let left = unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.left) };
+        let right =
+            unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.right) };
 
         assert_eq!(left.value, "x");
         assert_eq!(condition.operator, "<");
         assert_eq!(right.value, "y");
 
         let consequence =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statement.consequence.statements[0]) };
-        assert_eq!(consequence.token.token_type, TokenType::IDENT("x".to_string()));
+            unsafe {
+                mem::transmute::<&Box<Statement>,
+                                 &Box<ExpressionStatement>>(&statement.consequence.statements[0])
+            };
+        assert_eq!(consequence.token.token_type,
+                   TokenType::IDENT("x".to_string()));
 
         let alternative =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statement.alternative.as_ref().unwrap().statements[0]) };
-        assert_eq!(alternative.token.token_type, TokenType::IDENT("y".to_string()));
+            unsafe {
+                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statement.alternative
+                                                                                  .as_ref()
+                                                                                  .unwrap()
+                                                                                  .statements
+                                                                                  [0])
+            };
+        assert_eq!(alternative.token.token_type,
+                   TokenType::IDENT("y".to_string()));
     }
 
     #[test]
