@@ -5,7 +5,7 @@ use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, Statement, Expression, LetStatement, ReturnStatement, ExpressionStatement,
           Identifier, PrefixExpression, InfixExpression, EmptyExpression, Node, IntegerLiteral,
-          Boolean, IfExpression, BlockStatement, FunctionLiteral};
+          Boolean, IfExpression, BlockStatement, FunctionLiteral, CallExpression};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -31,6 +31,7 @@ fn precendences(token: TokenType) -> Precedence {
         MINUS => SUM,
         DIVIDE => PRODUCT,
         MULTIPLY => PRODUCT,
+        LPAREN => CALL,
         _ => LOWEST,
     }
 }
@@ -237,6 +238,35 @@ impl Parser {
         }
     }
 
+    fn parse_call_expression(&mut self, left: Box<Expression>) -> Box<Expression> {
+        let token = self.current_token.clone();
+        let arguments = self.parse_call_arguments();
+        Box::new(CallExpression {
+                     token: token,
+                     function: left,
+                     arguments: arguments,
+                 })
+    }
+
+    fn parse_call_arguments(&mut self) -> Vec<Box<Expression>> {
+        let mut arguments: Vec<Box<Expression>> = vec![];
+        if self.peek_token_is(TokenType::RPAREN) {
+            self.next_token();
+            return arguments;
+        }
+        self.next_token();
+        arguments.push(self.parse_expression(Precedence::LOWEST));
+
+        while self.peek_token_is(TokenType::COMMA) {
+            self.next_token();
+            self.next_token();
+            arguments.push(self.parse_expression(Precedence::LOWEST));
+        }
+
+        self.expect_peek_token(TokenType::RPAREN);
+        arguments
+    }
+
     fn parse_infix(&mut self, t: TokenType, left: Box<Expression>) -> Box<Expression> {
         use self::TokenType::*;
         match t {
@@ -248,6 +278,7 @@ impl Parser {
             NOTEQ => self.parse_infix_expression(left),
             LT => self.parse_infix_expression(left),
             GT => self.parse_infix_expression(left),
+            LPAREN => self.parse_call_expression(left),
             _ => left,
         }
     }
@@ -715,6 +746,29 @@ mod tests {
     }
 
     #[test]
+    fn it_should_parse_call_expression() {
+        let l = lexer::new("add(1, 2 * 3, 4 + 5);".to_string());
+        let mut parser = new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+        assert_eq!(statements_count, 1);
+
+        let expression =
+            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
+        let call_expression = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<CallExpression>>(&expression.expression)
+        };
+        let identifier = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&call_expression.function)
+        };
+        assert_eq!(identifier.value, "add");
+        assert_eq!(&call_expression.arguments[0].string(), "1");
+        assert_eq!(&call_expression.arguments[1].string(), "(2 * 3)");
+        assert_eq!(&call_expression.arguments[2].string(), "(4 + 5)");
+    }
+
+    #[test]
     fn it_should_parse_prefix_expression() {
         let expects = [("!5;", "!", 5, "5"), ("-15;", "-", 15, "15")];
 
@@ -860,7 +914,11 @@ mod tests {
                        ("(5 + 5) * 2", "((5 + 5) * 2)"),
                        ("2 / (5 + 5)", "(2 / (5 + 5))"),
                        ("-(5 + 5)", "(-(5 + 5))"),
-                       ("!(true == true)", "(!(true == true))")];
+                       ("!(true == true)", "(!(true == true))"),
+                       ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+                       ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+                        "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
+                       ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")];
 
         for expect in expects.iter() {
             let l = lexer::new(expect.0.to_string());
@@ -871,5 +929,6 @@ mod tests {
             assert_eq!(actual, expect.1);
         }
     }
+
 }
 

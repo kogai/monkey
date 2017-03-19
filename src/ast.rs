@@ -295,3 +295,26 @@ impl Expression for FunctionLiteral {
     fn expression_node(&self) {}
 }
 
+pub struct CallExpression {
+    pub token: Token,
+    pub function: Box<Expression>,
+    pub arguments: Vec<Box<Expression>>,
+}
+
+impl Expression for CallExpression {
+    fn expression_node(&self) {}
+}
+
+impl Node for CallExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        let arguments = &self.arguments;
+        let arguments_string =
+            arguments.into_iter().map(|p| p.string()).collect::<Vec<String>>().join(", ");
+        format!("{}({})", self.function.string(), arguments_string)
+    }
+}
+
