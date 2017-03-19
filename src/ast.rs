@@ -269,3 +269,29 @@ impl Expression for IfExpression {
     fn expression_node(&self) {}
 }
 
+pub struct FunctionLiteral {
+    pub token: Token,
+    pub parameters: Vec<Identifier>,
+    pub body: BlockStatement,
+}
+
+impl Node for FunctionLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        let parameters = &self.parameters;
+        let parameters_string =
+            parameters.into_iter().map(|p| p.string()).collect::<Vec<String>>().join(", ");
+        format!("{}({}) {}",
+                self.token_literal(),
+                parameters_string,
+                self.body.string())
+    }
+}
+
+impl Expression for FunctionLiteral {
+    fn expression_node(&self) {}
+}
+

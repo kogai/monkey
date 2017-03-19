@@ -5,7 +5,7 @@ use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, Statement, Expression, LetStatement, ReturnStatement, ExpressionStatement,
           Identifier, PrefixExpression, InfixExpression, EmptyExpression, Node, IntegerLiteral,
-          Boolean, IfExpression, BlockStatement};
+          Boolean, IfExpression, BlockStatement, FunctionLiteral};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -141,8 +141,48 @@ impl Parser {
             FALSE => self.parse_boolean(),
             LPAREN => self.parse_group_expression(),
             IF => self.parse_if_expression(),
+            FUNCTION => self.parse_function_literal(),
             _ => Box::new(EmptyExpression {}),
         }
+    }
+
+    fn parse_function_literal(&mut self) -> Box<Expression> {
+        let token = self.current_token.clone();
+        self.expect_peek_token(TokenType::LPAREN);
+        let parameters = self.parse_function_parameters();
+        self.expect_peek_token(TokenType::LBRACE);
+        let body = self.parse_block_statement();
+
+        Box::new(FunctionLiteral {
+                     token: token,
+                     parameters: parameters,
+                     body: body,
+                 })
+    }
+
+    fn parse_function_parameters(&mut self) -> Vec<Identifier> {
+        let mut identifiers: Vec<Identifier> = vec![];
+
+        if self.peek_token_is(TokenType::RPAREN) {
+            self.next_token();
+            return identifiers;
+        }
+
+        self.next_token();
+        identifiers.push(Identifier {
+                             token: self.current_token.clone(),
+                             value: self.current_token.literal.clone(),
+                         });
+        while self.peek_token_is(TokenType::COMMA) {
+            self.next_token();
+            self.next_token();
+            identifiers.push(Identifier {
+                                 token: self.current_token.clone(),
+                                 value: self.current_token.literal.clone(),
+                             });
+        }
+        self.expect_peek_token(TokenType::RPAREN);
+        identifiers
     }
 
     fn parse_boolean(&self) -> Box<Expression> {
@@ -631,6 +671,47 @@ mod tests {
             };
         assert_eq!(alternative.token.token_type,
                    TokenType::IDENT("y".to_string()));
+    }
+
+    #[test]
+    fn it_should_parse_function_literal() {
+        let l = lexer::new("fn(x, y) { x + y };".to_string());
+        let mut parser = new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+        assert_eq!(statements_count, 1);
+
+        let expression =
+            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
+        let function = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<FunctionLiteral>>(&expression.expression)
+        };
+        assert_eq!(function.parameters.len(), 2);
+        assert_eq!(&function.parameters[0].value, "x");
+        assert_eq!(&function.parameters[1].value, "y");
+        assert_eq!(function.body.statements.len(), 1);
+
+        let body_statements =
+            unsafe {
+                mem::transmute::<&Box<Statement>,
+                                 &Box<ExpressionStatement>>(&function.body.statements[0])
+            };
+        let infix_expression =
+            unsafe {
+                mem::transmute::<&Box<Expression>,
+                                 &Box<InfixExpression>>(&body_statements.expression)
+            };
+
+        let left =
+            unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&infix_expression.left) };
+        let right = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&infix_expression.right)
+        };
+
+        assert_eq!(left.value, "x");
+        assert_eq!(infix_expression.operator, "+");
+        assert_eq!(right.value, "y");
     }
 
     #[test]
