@@ -1,30 +1,36 @@
-use std::io;
+use std::io::{self, Write};
 
 use lexer;
-use token::TokenType;
+use parser;
+use ast::Node;
 
 pub fn run() {
     let prompt = ">>";
     let mut scan = String::new();
 
-    println!("read print eval loop is started");
-    println!("{}", prompt);
+    print!("read print eval loop is started {}", prompt);
+    io::stdout().flush().unwrap();
 
     loop {
         io::stdin()
             .read_line(&mut scan)
             .expect("Failed to read line");
 
-        let mut lex = lexer::new(scan.clone());
+        let lex = lexer::new(scan.clone());
+        let mut p = parser::new(lex);
+        let program = p.parse_program();
 
-        while lex.next() {
-            let t = lex.next_token();
-            if t.token_type == TokenType::EOF {
-                break;
+        if p.errors.len() > 0 {
+            for error in p.errors.into_iter() {
+                println!("{}", error);
             }
-            println!("{:?}", t.token_type);
+            continue;
         }
+
+        println!("{:?}", program.string());
+        scan = "".to_string();
         print!("{}", prompt);
+        io::stdout().flush().unwrap();
     }
 }
 

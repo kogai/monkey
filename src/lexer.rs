@@ -9,15 +9,6 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn next(&self) -> bool {
-        let position = self.position as usize;
-
-        match self.input.chars().nth(position) {
-            Some(_) => true,
-            None => false,
-        }
-    }
-
     fn read_char(&mut self) {
         let position = self.position as usize;
 

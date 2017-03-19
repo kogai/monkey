@@ -1,11 +1,10 @@
-use std::mem;
 use std::str::FromStr;
 
 use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, Statement, Expression, LetStatement, ReturnStatement, ExpressionStatement,
-          Identifier, PrefixExpression, InfixExpression, EmptyExpression, Node, IntegerLiteral,
-          Boolean, IfExpression, BlockStatement, FunctionLiteral, CallExpression};
+          Identifier, PrefixExpression, InfixExpression, EmptyExpression, IntegerLiteral, Boolean,
+          IfExpression, BlockStatement, FunctionLiteral, CallExpression};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -52,11 +51,11 @@ fn is_infix_operator(t: TokenType) -> bool {
 }
 
 #[derive(Debug, Clone)]
-struct Parser {
+pub struct Parser {
     lexer: Lexer,
     current_token: Token,
     peek_token: Token,
-    errors: Vec<String>,
+    pub errors: Vec<String>,
 }
 
 impl Parser {
@@ -73,7 +72,7 @@ impl Parser {
         precendences(self.current_token.token_type.clone())
     }
 
-    fn parse_program(&mut self) -> Program {
+    pub fn parse_program(&mut self) -> Program {
         let mut statements: Vec<Box<Statement>> = vec![];
 
         while self.current_token.token_type != TokenType::EOF {
@@ -408,7 +407,7 @@ impl Parser {
     }
 }
 
-fn new(mut lexer: Lexer) -> Parser {
+pub fn new(mut lexer: Lexer) -> Parser {
     let first = lexer.next_token();
     let second = lexer.next_token();
     Parser {
@@ -421,7 +420,9 @@ fn new(mut lexer: Lexer) -> Parser {
 
 #[cfg(test)]
 mod tests {
+    use std::mem;
     use super::*;
+    use ast::Node;
     use lexer;
 
     #[test]
