@@ -4,7 +4,8 @@ use std::str::FromStr;
 use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, Statement, Expression, LetStatement, ReturnStatement, ExpressionStatement,
-          Identifier, PrefixExpression, InfixExpression, EmptyExpression, Node, IntegerLiteral, Boolean};
+          Identifier, PrefixExpression, InfixExpression, EmptyExpression, Node, IntegerLiteral,
+          Boolean, IfExpression, BlockStatement};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -37,14 +38,14 @@ fn precendences(token: TokenType) -> Precedence {
 fn is_infix_operator(t: TokenType) -> bool {
     use self::TokenType::*;
     match t {
-        PLUS =>true,
-        MINUS =>true,
-        DIVIDE =>true,
-        MULTIPLY =>true,
-        EQ =>true,
-        NOTEQ =>true,
-        LT =>true,
-        GT =>true,
+        PLUS => true,
+        MINUS => true,
+        DIVIDE => true,
+        MULTIPLY => true,
+        EQ => true,
+        NOTEQ => true,
+        LT => true,
+        GT => true,
         _ => false,
     }
 }
@@ -133,36 +134,80 @@ impl Parser {
         use self::TokenType::*;
         match t {
             IDENT(_) => self.parse_identifier(),
-            INT(_) => {
-                self.parse_integer_literal().unwrap_or(Box::new(EmptyExpression {}))
-            }
+            INT(_) => self.parse_integer_literal().unwrap_or(Box::new(EmptyExpression {})),
             BANG => self.parse_prefix_expression(),
             MINUS => self.parse_prefix_expression(),
             TRUE => self.parse_boolean(),
             FALSE => self.parse_boolean(),
             LPAREN => self.parse_group_expression(),
+            IF => self.parse_if_expression(),
             _ => Box::new(EmptyExpression {}),
         }
     }
 
     fn parse_boolean(&self) -> Box<Expression> {
-        Box::new(Boolean{
-            token: self.current_token.clone(),
-            value: self.current_token_is(TokenType::TRUE),
+        Box::new(Boolean {
+                     token: self.current_token.clone(),
+                     value: self.current_token_is(TokenType::TRUE),
+                 })
+    }
+
+    fn parse_if_expression(&mut self) -> Box<Expression> {
+        let token = self.current_token.clone();
+        self.expect_peek_token(TokenType::LPAREN);
+        self.next_token();
+        let condition = self.parse_expression(Precedence::LOWEST);
+        self.expect_peek_token(TokenType::RPAREN);
+        self.expect_peek_token(TokenType::LBRACE);
+        let consequence = self.parse_block_statement();
+
+        let alternative = match self.peek_token_is(TokenType::ELSE) {
+            true => {
+                self.next_token();
+                self.expect_peek_token(TokenType::LBRACE);
+                Some(self.parse_block_statement())
+            },
+            false => None,
+        };
+
+        Box::new(IfExpression {
+            token: token,
+            condition: condition,
+            consequence: consequence,
+            alternative: alternative,
         })
+    }
+
+    fn parse_block_statement(&mut self) -> BlockStatement {
+        let token = self.current_token.clone();
+        let mut statements: Vec<Box<Statement>> = vec![];
+        self.next_token();
+
+        while !self.current_token_is(TokenType::RBRACE) {
+            let statement = self.parse_statement();
+            if statement.is_some() {
+                statements.push(statement.unwrap());
+            }
+            self.next_token();
+        };
+
+        BlockStatement {
+            token: token,
+            statements: statements,
+        }
     }
 
     fn parse_infix(&mut self, t: TokenType, left: Box<Expression>) -> Box<Expression> {
         use self::TokenType::*;
         match t {
-            PLUS =>self.parse_infix_expression(left),
-            MINUS =>self.parse_infix_expression(left),
-            DIVIDE =>self.parse_infix_expression(left),
-            MULTIPLY =>self.parse_infix_expression(left),
-            EQ =>self.parse_infix_expression(left),
-            NOTEQ =>self.parse_infix_expression(left),
-            LT =>self.parse_infix_expression(left),
-            GT =>self.parse_infix_expression(left),
+            PLUS => self.parse_infix_expression(left),
+            MINUS => self.parse_infix_expression(left),
+            DIVIDE => self.parse_infix_expression(left),
+            MULTIPLY => self.parse_infix_expression(left),
+            EQ => self.parse_infix_expression(left),
+            NOTEQ => self.parse_infix_expression(left),
+            LT => self.parse_infix_expression(left),
+            GT => self.parse_infix_expression(left),
             _ => left,
         }
     }
@@ -189,11 +234,11 @@ impl Parser {
         let right = self.parse_expression(precendence);
 
         Box::new(InfixExpression {
-          token: current_token,
-          operator: operator,
-          left: left,
-          right: right,
-        })
+                     token: current_token,
+                     operator: operator,
+                     left: left,
+                     right: right,
+                 })
     }
 
     fn parse_identifier(&mut self) -> Box<Expression> {
@@ -273,7 +318,7 @@ impl Parser {
         let expression = self.parse_expression(Precedence::LOWEST);
         match self.expect_peek_token(TokenType::RPAREN) {
             true => expression,
-            false => Box::new(EmptyExpression{}),
+            false => Box::new(EmptyExpression {}),
         }
     }
 
@@ -479,9 +524,8 @@ mod tests {
         let statement =
             unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
 
-        let identifier = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&statement.expression)
-        };
+        let identifier =
+            unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&statement.expression) };
         assert_eq!(identifier.value, "foobar");
         assert_eq!(identifier.token_literal(), "foobar");
     }
@@ -502,11 +546,80 @@ mod tests {
             let statement = unsafe {
                 mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
             };
-            let boolean = unsafe {
-                mem::transmute::<&Box<Expression>, &Box<Boolean>>(&statement.expression)
-            };
+            let boolean =
+                unsafe { mem::transmute::<&Box<Expression>, &Box<Boolean>>(&statement.expression) };
             assert_eq!(boolean.value, expect.1);
         }
+    }
+
+    #[test]
+    fn it_should_parse_if_expression() {
+        let l = lexer::new("if (x < y) {x}".to_string());
+        let mut parser = new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+        assert_eq!(statements_count, 1);
+
+        let expression =
+            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
+        let statement =
+            unsafe { mem::transmute::<&Box<Expression>, &Box<IfExpression>>(&expression.expression) };
+        let condition = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.condition)
+        };
+
+        let left = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.left)
+        };
+        let right = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.right)
+        };
+
+        assert_eq!(left.value, "x");
+        assert_eq!(condition.operator, "<");
+        assert_eq!(right.value, "y");
+
+        let consequence =
+            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statement.consequence.statements[0]) };
+        assert_eq!(consequence.token.token_type, TokenType::IDENT("x".to_string()));
+    }
+
+    #[test]
+    fn it_should_parse_if_else_expression() {
+        let l = lexer::new("if (x < y) {x} else {y}".to_string());
+        let mut parser = new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+        assert_eq!(statements_count, 1);
+
+        let expression =
+            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
+        let statement =
+            unsafe { mem::transmute::<&Box<Expression>, &Box<IfExpression>>(&expression.expression) };
+        let condition = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.condition)
+        };
+
+        let left = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.left)
+        };
+        let right = unsafe {
+            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.right)
+        };
+
+        assert_eq!(left.value, "x");
+        assert_eq!(condition.operator, "<");
+        assert_eq!(right.value, "y");
+
+        let consequence =
+            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statement.consequence.statements[0]) };
+        assert_eq!(consequence.token.token_type, TokenType::IDENT("x".to_string()));
+
+        let alternative =
+            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statement.alternative.as_ref().unwrap().statements[0]) };
+        assert_eq!(alternative.token.token_type, TokenType::IDENT("y".to_string()));
     }
 
     #[test]
@@ -538,10 +651,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_prefix_expression_with_boolean() {
-        let expects = [
-            ("!true;", "!", true),
-            ("!false;", "!", false),
-        ];
+        let expects = [("!true;", "!", true), ("!false;", "!", false)];
 
         for expect in expects.iter() {
             let l = lexer::new(expect.0.to_string());
@@ -567,16 +677,14 @@ mod tests {
 
     #[test]
     fn it_should_parse_infix_expression() {
-        let expects = [
-          ("5 + 5;", 5, "+", 5),
-          ("5 - 5;", 5, "-", 5),
-          ("5 * 5;", 5, "*", 5),
-          ("5 / 5;", 5, "/", 5),
-          ("5 > 5;", 5, ">", 5),
-          ("5 < 5;", 5, "<", 5),
-          ("5 == 5;", 5, "==", 5),
-          ("5 != 5;", 5, "!=", 5),
-        ];
+        let expects = [("5 + 5;", 5, "+", 5),
+                       ("5 - 5;", 5, "-", 5),
+                       ("5 * 5;", 5, "*", 5),
+                       ("5 / 5;", 5, "/", 5),
+                       ("5 > 5;", 5, ">", 5),
+                       ("5 < 5;", 5, "<", 5),
+                       ("5 == 5;", 5, "==", 5),
+                       ("5 != 5;", 5, "!=", 5)];
 
         for expect in expects.iter() {
             let l = lexer::new(expect.0.to_string());
@@ -594,23 +702,23 @@ mod tests {
                 mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.expression)
             };
 
-            let left =
-                unsafe { mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&expression.left) };
+            let left = unsafe {
+                mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&expression.left)
+            };
             assert_eq!(left.value, expect.1);
             assert_eq!(expression.operator, expect.2);
-            let right =
-                unsafe { mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&expression.right) };
+            let right = unsafe {
+                mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&expression.right)
+            };
             assert_eq!(right.value, expect.3);
         }
     }
 
     #[test]
     fn it_should_parse_infix_expression_with_boolean() {
-        let expects = [
-          ("true == true;", true, "==", true),
-          ("true != false;", true, "!=", false),
-          ("false == false;", false, "==", false),
-        ];
+        let expects = [("true == true;", true, "==", true),
+                       ("true != false;", true, "!=", false),
+                       ("false == false;", false, "==", false)];
 
         for expect in expects.iter() {
             let l = lexer::new(expect.0.to_string());
@@ -640,29 +748,27 @@ mod tests {
 
     #[test]
     fn it_should_parse_operator_with_precedence() {
-        let expects = [
-          ("-a * b", "((-a) * b)"),
-          ("!-a", "(!(-a))"),
-          ("a + b + c", "((a + b) + c)"),
-          ("a + b - c", "((a + b) - c)"),
-          ("a * b * c", "((a * b) * c)"),
-          ("a * b / c", "((a * b) / c)"),
-          ("a + b / c", "(a + (b / c))"),
-          ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
-          ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
-          ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
-          ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
-          ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
-          ("true", "true"),
-          ("false", "false"),
-          ("3 > 5 == false", "((3 > 5) == false)"),
-          ("3 < 5 == true", "((3 < 5) == true)"),
-          ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
-          ("(5 + 5) * 2", "((5 + 5) * 2)"),
-          ("2 / (5 + 5)", "(2 / (5 + 5))"),
-          ("-(5 + 5)", "(-(5 + 5))"),
-          ("!(true == true)", "(!(true == true))"),
-        ];
+        let expects = [("-a * b", "((-a) * b)"),
+                       ("!-a", "(!(-a))"),
+                       ("a + b + c", "((a + b) + c)"),
+                       ("a + b - c", "((a + b) - c)"),
+                       ("a * b * c", "((a * b) * c)"),
+                       ("a * b / c", "((a * b) / c)"),
+                       ("a + b / c", "(a + (b / c))"),
+                       ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+                       ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+                       ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+                       ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+                       ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+                       ("true", "true"),
+                       ("false", "false"),
+                       ("3 > 5 == false", "((3 > 5) == false)"),
+                       ("3 < 5 == true", "((3 < 5) == true)"),
+                       ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+                       ("(5 + 5) * 2", "((5 + 5) * 2)"),
+                       ("2 / (5 + 5)", "(2 / (5 + 5))"),
+                       ("-(5 + 5)", "(-(5 + 5))"),
+                       ("!(true == true)", "(!(true == true))")];
 
         for expect in expects.iter() {
             let l = lexer::new(expect.0.to_string());
@@ -674,3 +780,4 @@ mod tests {
         }
     }
 }
+

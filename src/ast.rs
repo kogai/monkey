@@ -35,6 +35,28 @@ impl Node for Program {
     }
 }
 
+pub struct BlockStatement {
+    pub token: Token,
+    pub statements: Vec<Box<Statement>>,
+}
+
+impl Node for BlockStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        let statemnts = &self.statements;
+        statemnts
+            .into_iter()
+            .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
+    }
+}
+
+impl Statement for BlockStatement {
+    fn statement_node(&self) {}
+}
+
 pub struct LetStatement {
     pub token: Token,
     pub name: Identifier,
@@ -207,5 +229,29 @@ impl Node for Boolean {
 }
 
 impl Expression for Boolean {
+    fn expression_node(&self) {}
+}
+
+pub struct IfExpression {
+    pub token: Token,
+    pub condition: Box<Expression>,
+    pub consequence: BlockStatement,
+    pub alternative: Option<BlockStatement>,
+}
+
+impl Node for IfExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        match self.alternative {
+            Some(ref x) => format!("if {} {} else {}", self.condition.string(), self.consequence.string(), x.string()),
+            None => format!("if {} {}", self.condition.string(), self.consequence.string()),
+        }
+    }
+}
+
+impl Expression for IfExpression {
     fn expression_node(&self) {}
 }
