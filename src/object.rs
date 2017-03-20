@@ -9,12 +9,12 @@ pub enum ObjectType {
 
 #[derive(Debug)]
 pub struct Object<T: Display> {
-    object_type: ObjectType,
-    value: T,
+    pub object_type: ObjectType,
+    pub value: T,
 }
 
 impl<T: Display> Object<T> {
-    fn inspect(&self) -> String {
+    pub fn inspect(&self) -> String {
         format!("{}", self.value)
     }
 }
