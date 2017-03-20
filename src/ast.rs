@@ -1,9 +1,28 @@
 use std::clone::Clone;
+use std::fmt::{Debug, Formatter, Result};
 use token::Token;
 
 pub trait Node {
     fn token_literal(&self) -> String;
     fn string(&self) -> String;
+    fn to_enum(&self) -> Nodes;
+}
+
+pub enum Nodes<'a> {
+    Program(&'a Program),
+    BlockStatement(&'a BlockStatement),
+    LetStatement(&'a LetStatement),
+    ReturnStatement(&'a ReturnStatement),
+    IntegerLiteral(&'a IntegerLiteral),
+    Boolean(&'a Boolean),
+    Identifier(&'a Identifier),
+    EmptyExpression(&'a EmptyExpression),
+    ExpressionStatement(&'a ExpressionStatement),
+    PrefixExpression(&'a PrefixExpression),
+    InfixExpression(&'a InfixExpression),
+    IfExpression(&'a IfExpression),
+    FunctionLiteral(&'a FunctionLiteral),
+    CallExpression(&'a CallExpression),
 }
 
 pub trait Statement: Node {
@@ -16,6 +35,12 @@ pub trait Expression: Node {
 
 pub struct Program {
     pub statements: Vec<Box<Statement>>,
+}
+
+impl Debug for Program {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "Program {{ statements: {} }}", self.statements.len())
+    }
 }
 
 impl Node for Program {
@@ -32,11 +57,23 @@ impl Node for Program {
         statemnts.into_iter()
             .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
     }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::Program(self)
+    }
 }
 
 pub struct BlockStatement {
     pub token: Token,
     pub statements: Vec<Box<Statement>>,
+}
+
+impl Debug for BlockStatement {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f,
+               "BlockStatement {{ statements: {} }}",
+               self.statements.len())
+    }
 }
 
 impl Node for BlockStatement {
@@ -48,6 +85,10 @@ impl Node for BlockStatement {
         let statemnts = &self.statements;
         statemnts.into_iter()
             .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
+    }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::BlockStatement(self)
     }
 }
 
@@ -72,6 +113,10 @@ impl Node for LetStatement {
                 self.name.string(),
                 self.value.string())
     }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::LetStatement(self)
+    }
 }
 
 impl Statement for LetStatement {
@@ -90,6 +135,10 @@ impl Node for ReturnStatement {
 
     fn string(&self) -> String {
         format!("{} {};", self.token_literal(), self.return_value.string())
+    }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::ReturnStatement(self)
     }
 }
 
@@ -111,6 +160,10 @@ impl Node for Identifier {
     fn string(&self) -> String {
         format!("{}", self.value)
     }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::Identifier(self)
+    }
 }
 
 impl Expression for Identifier {
@@ -126,6 +179,10 @@ impl Node for EmptyExpression {
 
     fn string(&self) -> String {
         format!("{}", self.token_literal())
+    }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::EmptyExpression(self)
     }
 }
 
@@ -145,6 +202,10 @@ impl Node for ExpressionStatement {
 
     fn string(&self) -> String {
         format!("{}", self.expression.string())
+    }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::ExpressionStatement(self)
     }
 }
 
@@ -166,6 +227,10 @@ impl Node for IntegerLiteral {
     fn string(&self) -> String {
         format!("{}", self.value)
     }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::IntegerLiteral(self)
+    }
 }
 
 impl Expression for IntegerLiteral {
@@ -185,6 +250,10 @@ impl Node for PrefixExpression {
 
     fn string(&self) -> String {
         format!("({}{})", self.operator, self.right.string())
+    }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::PrefixExpression(self)
     }
 }
 
@@ -210,6 +279,10 @@ impl Node for InfixExpression {
                 self.operator,
                 self.right.string())
     }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::InfixExpression(self)
+    }
 }
 
 impl Expression for InfixExpression {
@@ -229,6 +302,10 @@ impl Node for Boolean {
 
     fn string(&self) -> String {
         format!("{}", self.value)
+    }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::Boolean(self)
     }
 }
 
@@ -263,6 +340,10 @@ impl Node for IfExpression {
             }
         }
     }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::IfExpression(self)
+    }
 }
 
 impl Expression for IfExpression {
@@ -288,6 +369,10 @@ impl Node for FunctionLiteral {
                 self.token_literal(),
                 parameters_string,
                 self.body.string())
+    }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::FunctionLiteral(self)
     }
 }
 
@@ -315,6 +400,10 @@ impl Node for CallExpression {
         let arguments_string =
             arguments.into_iter().map(|p| p.string()).collect::<Vec<String>>().join(", ");
         format!("{}({})", self.function.string(), arguments_string)
+    }
+
+    fn to_enum(&self) -> Nodes {
+        Nodes::CallExpression(self)
     }
 }
 
