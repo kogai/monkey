@@ -13,6 +13,7 @@ pub fn eval(node: Nodes) -> Object {
 }
 
 pub fn eval_statements(statements: &Vec<Box<Statement>>) -> Object {
+    // TODO: iterate statements.
     let statement = statements.first().unwrap();
     eval(statement.to_enum())
 }

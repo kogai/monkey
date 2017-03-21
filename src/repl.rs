@@ -3,6 +3,7 @@ use std::io::{self, Write};
 use lexer;
 use parser;
 use ast::Node;
+use evaluator::eval;
 
 pub fn run() {
     let prompt = ">>";
@@ -27,7 +28,8 @@ pub fn run() {
             continue;
         }
 
-        println!("{:?}", program.string());
+        let evaluated = eval(program.to_enum());
+        println!("{:?}", evaluated.inspect());
         scan = "".to_string();
         print!("{}", prompt);
         io::stdout().flush().unwrap();
