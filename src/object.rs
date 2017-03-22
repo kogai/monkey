@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Null;
 
 impl Display for Null {
@@ -9,14 +9,14 @@ impl Display for Null {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObjectType {
     Integer(usize),
     Boolean(bool),
     Null(Null),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Object {
     pub object_type: ObjectType,
 }
