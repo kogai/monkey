@@ -17,8 +17,8 @@ pub fn run() {
             .read_line(&mut scan)
             .expect("Failed to read line");
 
-        let lex = lexer::new(scan.clone());
-        let mut p = parser::new(lex);
+        let lex = lexer::Lexer::new(scan.clone());
+        let mut p = parser::Parser::new(lex);
         let program = p.parse_program();
 
         if p.errors.len() > 0 {

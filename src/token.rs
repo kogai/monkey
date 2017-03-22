@@ -105,12 +105,14 @@ pub struct Token {
     pub literal: String,
 }
 
-pub fn new(s: String) -> Token {
-    let tt = TokenType::from_str(s.as_str());
+impl Token {
+    pub fn new(s: String) -> Self {
+        let tt = TokenType::from_str(s.as_str());
 
-    Token {
-        token_type: tt.clone(),
-        literal: tt.to_str(),
+        Token {
+            token_type: tt.clone(),
+            literal: tt.to_str(),
+        }
     }
 }
 

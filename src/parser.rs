@@ -59,6 +59,17 @@ pub struct Parser {
 }
 
 impl Parser {
+    pub fn new(mut lexer: Lexer) -> Self {
+        let first = lexer.next_token();
+        let second = lexer.next_token();
+        Parser {
+            lexer: lexer,
+            current_token: first,
+            peek_token: second,
+            errors: vec![],
+        }
+    }
+
     fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
@@ -407,17 +418,6 @@ impl Parser {
     }
 }
 
-pub fn new(mut lexer: Lexer) -> Parser {
-    let first = lexer.next_token();
-    let second = lexer.next_token();
-    Parser {
-        lexer: lexer,
-        current_token: first,
-        peek_token: second,
-        errors: vec![],
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::mem;
@@ -427,16 +427,16 @@ mod tests {
 
     #[test]
     fn it_should_detect_token_type() {
-        let l = lexer::new("let x = 5;".to_string());
-        let parser = new(l);
+        let l = lexer::Lexer::new("let x = 5;".to_string());
+        let parser = Parser::new(l);
         assert!(parser.current_token_is(TokenType::LET));
         assert!(parser.peek_token_is(TokenType::IDENT("x".to_string())));
     }
 
     #[test]
     fn is_should_detect_peek_token() {
-        let l = lexer::new("let x = 5;".to_string());
-        let mut parser = new(l);
+        let l = lexer::Lexer::new("let x = 5;".to_string());
+        let mut parser = Parser::new(l);
         assert!(parser.expect_peek_token(TokenType::IDENT("x".to_string())));
         assert!(parser.expect_peek_token(TokenType::ASSIGN));
         assert!(parser.expect_peek_token(TokenType::INT("5".to_string())));
@@ -450,8 +450,8 @@ mod tests {
                        ("let foobar = y;", "foobar", "y")];
 
         for expect in expects.iter() {
-            let l = lexer::new(expect.0.to_string());
-            let mut parser = new(l);
+            let l = lexer::Lexer::new(expect.0.to_string());
+            let mut parser = Parser::new(l);
             let parsed = parser.parse_let_statement();
 
             assert_eq!(parsed.token.token_type, TokenType::LET);
@@ -462,14 +462,14 @@ mod tests {
 
     #[test]
     fn it_should_parse_statements() {
-        let l = lexer::new("
+        let l = lexer::Lexer::new("
       let x = 5;
       let y = 10;
       let foobar = 838383;
     "
-                                   .to_string());
+                                          .to_string());
 
-        let mut parser = new(l);
+        let mut parser = Parser::new(l);
         let program = parser.parse_program();
         let statements = program.statements;
         let statements_count = statements.len();
@@ -491,14 +491,14 @@ mod tests {
 
     #[test]
     fn it_should_peek_error_syntax() {
-        let l = lexer::new("
+        let l = lexer::Lexer::new("
       let x 5;
       let = 10;
       let 838383;
     "
-                                   .to_string());
+                                          .to_string());
 
-        let mut parser = new(l);
+        let mut parser = Parser::new(l);
         parser.parse_program();
         let errors_count = parser.errors.len();
 
@@ -518,8 +518,8 @@ mod tests {
         let expects = [("return 5;", "5"), ("return 10;", "10"), ("return 993322;", "993322")];
 
         for expect in expects.iter() {
-            let l = lexer::new(expect.0.to_string());
-            let mut parser = new(l);
+            let l = lexer::Lexer::new(expect.0.to_string());
+            let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let statements = program.statements;
             let statement =
@@ -531,9 +531,9 @@ mod tests {
 
     #[test]
     fn it_should_parse_expression_statement() {
-        let l = lexer::new("foobar;".to_string());
+        let l = lexer::Lexer::new("foobar;".to_string());
 
-        let mut parser = new(l);
+        let mut parser = Parser::new(l);
         let program = parser.parse_program();
         let statements = program.statements;
         let statements_count = statements.len();
@@ -550,9 +550,9 @@ mod tests {
 
     #[test]
     fn it_should_parse_integer_literal_expression() {
-        let l = lexer::new("5;".to_string());
+        let l = lexer::Lexer::new("5;".to_string());
 
-        let mut parser = new(l);
+        let mut parser = Parser::new(l);
         let program = parser.parse_program();
         let statements = program.statements;
         let statements_count = statements.len();
@@ -570,9 +570,9 @@ mod tests {
 
     #[test]
     fn it_should_parse_identifier_expression() {
-        let l = lexer::new("foobar;".to_string());
+        let l = lexer::Lexer::new("foobar;".to_string());
 
-        let mut parser = new(l);
+        let mut parser = Parser::new(l);
         let program = parser.parse_program();
         let statements = program.statements;
         let statements_count = statements.len();
@@ -592,9 +592,9 @@ mod tests {
         let expects = [("true;", true), ("false;", false)];
 
         for expect in expects.iter() {
-            let l = lexer::new(expect.0.to_string());
+            let l = lexer::Lexer::new(expect.0.to_string());
 
-            let mut parser = new(l);
+            let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let statements = program.statements;
             let statements_count = statements.len();
@@ -611,8 +611,8 @@ mod tests {
 
     #[test]
     fn it_should_parse_if_expression() {
-        let l = lexer::new("if (x < y) {x}".to_string());
-        let mut parser = new(l);
+        let l = lexer::Lexer::new("if (x < y) {x}".to_string());
+        let mut parser = Parser::new(l);
         let program = parser.parse_program();
         let statements = program.statements;
         let statements_count = statements.len();
@@ -646,8 +646,8 @@ mod tests {
 
     #[test]
     fn it_should_parse_if_else_expression() {
-        let l = lexer::new("if (x < y) {x} else {y}".to_string());
-        let mut parser = new(l);
+        let l = lexer::Lexer::new("if (x < y) {x} else {y}".to_string());
+        let mut parser = Parser::new(l);
         let program = parser.parse_program();
         let statements = program.statements;
         let statements_count = statements.len();
@@ -692,8 +692,8 @@ mod tests {
 
     #[test]
     fn it_should_parse_function_literal() {
-        let l = lexer::new("fn(x, y) { x + y };".to_string());
-        let mut parser = new(l);
+        let l = lexer::Lexer::new("fn(x, y) { x + y };".to_string());
+        let mut parser = Parser::new(l);
         let program = parser.parse_program();
         let statements = program.statements;
         let statements_count = statements.len();
@@ -733,8 +733,8 @@ mod tests {
 
     #[test]
     fn it_should_parse_call_expression() {
-        let l = lexer::new("add(1, 2 * 3, 4 + 5);".to_string());
-        let mut parser = new(l);
+        let l = lexer::Lexer::new("add(1, 2 * 3, 4 + 5);".to_string());
+        let mut parser = Parser::new(l);
         let program = parser.parse_program();
         let statements = program.statements;
         let statements_count = statements.len();
@@ -759,9 +759,9 @@ mod tests {
         let expects = [("!5;", "!", 5, "5"), ("-15;", "-", 15, "15")];
 
         for expect in expects.iter() {
-            let l = lexer::new(expect.0.to_string());
+            let l = lexer::Lexer::new(expect.0.to_string());
 
-            let mut parser = new(l);
+            let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let statements = program.statements;
             let statements_count = statements.len();
@@ -786,9 +786,9 @@ mod tests {
         let expects = [("!true;", "!", true), ("!false;", "!", false)];
 
         for expect in expects.iter() {
-            let l = lexer::new(expect.0.to_string());
+            let l = lexer::Lexer::new(expect.0.to_string());
 
-            let mut parser = new(l);
+            let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let statements = program.statements;
             let statements_count = statements.len();
@@ -819,9 +819,9 @@ mod tests {
                        ("5 != 5;", 5, "!=", 5)];
 
         for expect in expects.iter() {
-            let l = lexer::new(expect.0.to_string());
+            let l = lexer::Lexer::new(expect.0.to_string());
 
-            let mut parser = new(l);
+            let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let statements = program.statements;
             let statements_count = statements.len();
@@ -853,9 +853,9 @@ mod tests {
                        ("false == false;", false, "==", false)];
 
         for expect in expects.iter() {
-            let l = lexer::new(expect.0.to_string());
+            let l = lexer::Lexer::new(expect.0.to_string());
 
-            let mut parser = new(l);
+            let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let statements = program.statements;
             let statements_count = statements.len();
@@ -907,9 +907,9 @@ mod tests {
                        ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")];
 
         for expect in expects.iter() {
-            let l = lexer::new(expect.0.to_string());
+            let l = lexer::Lexer::new(expect.0.to_string());
 
-            let mut parser = new(l);
+            let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let actual = program.string();
             assert_eq!(actual, expect.1);

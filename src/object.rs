@@ -47,12 +47,5 @@ impl Object {
             _ => None,
         }
     }
-
-    pub fn to_null(&self) -> Option<Null> {
-        match self.object_type {
-            ObjectType::Null(ref x) => Some(x.clone()),
-            _ => None,
-        }
-    }
 }
 

@@ -9,6 +9,17 @@ pub struct Lexer {
 }
 
 impl Lexer {
+    pub fn new(input: String) -> Self {
+        let mut l = Lexer {
+            input: input,
+            current_char: "".to_string(),
+            position: 0,
+            read_position: 1,
+        };
+        l.read_char();
+        l
+    }
+
     fn read_char(&mut self) {
         let position = self.position as usize;
 
@@ -49,7 +60,7 @@ impl Lexer {
                 x.clone()
             },
         };
-        token::new(seed)
+        token::Token::new(seed)
     }
 
     pub fn read_identifier(&mut self) -> String {
@@ -102,17 +113,6 @@ pub fn is_digit(s: &String) -> bool {
     }
 }
 
-pub fn new(input: String) -> Lexer {
-    let mut l = Lexer {
-        input: input,
-        current_char: "".to_string(),
-        position: 0,
-        read_position: 1,
-    };
-    l.read_char();
-    l
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,7 +139,7 @@ mod tests {
 
     #[test]
     fn it_should_analysis_arithmetic() {
-        let mut l = new("!-*/<>".to_string());
+        let mut l = Lexer::new("!-*/<>".to_string());
         let expects = [
             (token::TokenType::BANG, "!"),
             (token::TokenType::MINUS, "-"),
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn it_should_analysis_control_syntax() {
-        let mut l = new("
+        let mut l = Lexer::new("
         if (5 < 10) {
             return true;
         } else {
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn it_should_analysis_comparison_operator() {
-        let mut l = new("
+        let mut l = Lexer::new("
             if (10 == 10) 
             if (5 != 10) 
         ".to_string());
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn it_analysis_simple_token() {
-        let mut l = new("
+        let mut l = Lexer::new("
             let five = 5;
             let ten = 10;
 

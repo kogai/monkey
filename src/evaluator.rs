@@ -100,8 +100,8 @@ mod tests {
     use ast::Node;
 
     fn test_eval(input: String) -> Object {
-        let l = lexer::new(input);
-        let mut parser = parser::new(l);
+        let l = lexer::Lexer::new(input);
+        let mut parser = parser::Parser::new(l);
         let program = parser.parse_program();
         eval(program.to_enum())
     }
