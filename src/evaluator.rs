@@ -5,19 +5,12 @@ const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
 const FALSE: Object = Object { object_type: ObjectType::Boolean(false) };
 const NULL: Object = Object { object_type: ObjectType::Null(Null) };
 
-fn native_bool_to_boolean_obj(x: bool) -> Object {
-    match x {
-        true => TRUE,
-        false => FALSE,
-    }
-}
-
 pub fn eval(node: Nodes) -> Object {
     use self::Nodes::*;
     match node {
         Program(x) => eval_statements(&x.statements),
         ExpressionStatement(x) => eval(x.expression.to_enum()),
-        IntegerLiteral(n) => Object { object_type: ObjectType::Integer(n.value) },
+        IntegerLiteral(n) => Object::new_i32(n.value),
         Boolean(n) => native_bool_to_boolean_obj(n.value),
         PrefixExpression(x) => {
             let operator = x.operator.clone();
@@ -28,14 +21,29 @@ pub fn eval(node: Nodes) -> Object {
     }
 }
 
-pub fn eval_prefix_expression(operator: String, right: Object) -> Object {
+fn native_bool_to_boolean_obj(x: bool) -> Object {
+    match x {
+        true => TRUE,
+        false => FALSE,
+    }
+}
+
+fn eval_prefix_expression(operator: String, right: Object) -> Object {
     match operator.as_str() {
         "!" => eval_bang_operator_expression(right),
+        "-" => eval_minus_operator_expression(right),
         _ => NULL,
     }
 }
 
-pub fn eval_bang_operator_expression(right: Object) -> Object {
+fn eval_minus_operator_expression(right: Object) -> Object {
+    match right.object_type {
+        ObjectType::Integer(x) => Object::new_i32(-x),
+        _ => NULL,
+    }
+}
+
+fn eval_bang_operator_expression(right: Object) -> Object {
     match right {
         TRUE => FALSE,
         FALSE => TRUE,
@@ -44,7 +52,7 @@ pub fn eval_bang_operator_expression(right: Object) -> Object {
     }
 }
 
-pub fn eval_statements(statements: &Vec<Box<Statement>>) -> Object {
+fn eval_statements(statements: &Vec<Box<Statement>>) -> Object {
     // TODO: iterate statements.
     let statement = statements.first().unwrap();
     eval(statement.to_enum())
@@ -66,10 +74,10 @@ mod tests {
 
     #[test]
     fn it_should_evaluate_integer_expression() {
-        let expects = [("5", 5), ("10", 10)];
+        let expects = [("5", 5), ("10", 10), ("-5", -5), ("-10", -10)];
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
-            assert_eq!(result.to_usize().unwrap(), expect.1);
+            assert_eq!(result.to_i32().unwrap(), expect.1);
         }
     }
 

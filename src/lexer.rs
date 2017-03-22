@@ -4,8 +4,8 @@ use token;
 pub struct Lexer {
     pub input: String,
     pub current_char: String,
-    pub position: u16,
-    pub read_position: u16,
+    pub position: i32,
+    pub read_position: i32,
 }
 
 impl Lexer {

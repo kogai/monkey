@@ -11,7 +11,7 @@ impl Display for Null {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObjectType {
-    Integer(usize),
+    Integer(i32),
     Boolean(bool),
     Null(Null),
 }
@@ -30,7 +30,11 @@ impl Object {
         }
     }
 
-    pub fn to_usize(&self) -> Option<usize> {
+    pub fn new_i32(x: i32) -> Self {
+        Object { object_type: ObjectType::Integer(x) }
+    }
+
+    pub fn to_i32(&self) -> Option<i32> {
         match self.object_type {
             ObjectType::Integer(ref x) => Some(x.clone()),
             _ => None,

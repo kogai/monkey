@@ -216,7 +216,7 @@ impl Statement for ExpressionStatement {
 #[derive(Debug)]
 pub struct IntegerLiteral {
     pub token: Token,
-    pub value: usize,
+    pub value: i32,
 }
 
 impl Node for IntegerLiteral {

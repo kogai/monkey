@@ -311,7 +311,7 @@ impl Parser {
 
     fn parse_integer_literal(&mut self) -> Option<Box<Expression>> {
         let current_token = self.current_token.clone();
-        let value = usize::from_str(self.current_token.literal.as_str().clone());
+        let value = i32::from_str(self.current_token.literal.as_str().clone());
 
         match value {
             Ok(s) => {
