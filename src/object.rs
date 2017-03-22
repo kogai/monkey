@@ -29,5 +29,26 @@ impl Object {
             ObjectType::Null(ref x) => format!("{}", x),
         }
     }
+
+    pub fn to_usize(&self) -> Option<usize> {
+        match self.object_type {
+            ObjectType::Integer(ref x) => Some(x.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn to_bool(&self) -> Option<bool> {
+        match self.object_type {
+            ObjectType::Boolean(ref x) => Some(x.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn to_null(&self) -> Option<Null> {
+        match self.object_type {
+            ObjectType::Null(ref x) => Some(x.clone()),
+            _ => None,
+        }
+    }
 }
 
