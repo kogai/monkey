@@ -1,4 +1,4 @@
-use ast::{Nodes, Statement};
+use ast::{Node, Nodes, Statement, IfExpression};
 use object::{Object, ObjectType, Null};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
@@ -9,6 +9,8 @@ pub fn eval(node: Nodes) -> Object {
     use self::Nodes::*;
     match node {
         Program(x) => eval_statements(&x.statements),
+        BlockStatement(x) => eval_statements(&x.statements),
+        IfExpression(x) => eval_if_expression(x),
         ExpressionStatement(x) => eval(x.expression.to_enum()),
         IntegerLiteral(n) => Object::new_i32(n.value),
         Boolean(n) => native_bool_to_boolean_obj(n.value),
@@ -24,6 +26,29 @@ pub fn eval(node: Nodes) -> Object {
             eval_infix_expression(operator, left, right)
         }
         _ => NULL,
+    }
+}
+
+fn eval_if_expression(x: &IfExpression) -> Object {
+
+    let condition = eval(x.condition.to_enum());
+    match is_truthy(condition) {
+        true => eval(x.consequence.to_enum()),
+        false => {
+            if let &Some(ref y) = &x.alternative {
+                return eval(y.to_enum());
+            };
+            NULL
+        }
+    }
+}
+
+fn is_truthy(x: Object) -> bool {
+    match x {
+        NULL => false,
+        TRUE => true,
+        FALSE => false,
+        _ => true,
     }
 }
 
@@ -88,8 +113,8 @@ fn eval_bang_operator_expression(right: Object) -> Object {
 
 fn eval_statements(statements: &Vec<Box<Statement>>) -> Object {
     // TODO: iterate statements.
-    let statement = statements.first().unwrap();
-    eval(statement.to_enum())
+    // let result: Object;
+    statements.iter().map(|x| eval(x.to_enum())).last().unwrap()
 }
 
 #[cfg(test)]
@@ -162,6 +187,21 @@ mod tests {
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_bool().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_if_else_expression() {
+        let expects = [("if (true) { 10 }", Some(10)),
+                       ("if (false) { 10 }", None),
+                       ("if (1) { 11 }", Some(11)),
+                       ("if (1 < 2) { 12 }", Some(12)),
+                       ("if (1 > 2) { 10 }", None),
+                       ("if (1 > 2) { 10 } else { 20 }", Some(20)),
+                       ("if (1 < 2) { 13 } else { 20 }", Some(13))];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_i32(), expect.1);
         }
     }
 }
