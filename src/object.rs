@@ -14,6 +14,7 @@ pub enum ObjectType {
     Integer(i32),
     Boolean(bool),
     Null(Null),
+    Return(Box<Object>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,11 +28,16 @@ impl Object {
             ObjectType::Integer(ref x) => format!("{}", x),
             ObjectType::Boolean(ref x) => format!("{}", x),
             ObjectType::Null(ref x) => format!("{}", x),
+            ObjectType::Return(ref x) => format!("{:?}", x),
         }
     }
 
     pub fn new_i32(x: i32) -> Self {
         Object { object_type: ObjectType::Integer(x) }
+    }
+
+    pub fn new_return_value(x: Self) -> Self {
+        Object { object_type: ObjectType::Return(Box::new(x)) }
     }
 
     pub fn to_i32(&self) -> Option<i32> {

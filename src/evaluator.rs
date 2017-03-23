@@ -1,4 +1,4 @@
-use ast::{Node, Nodes, Statement, IfExpression};
+use ast::{Node, Nodes, Statement, IfExpression, BlockStatement};
 use object::{Object, ObjectType, Null};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
@@ -8,8 +8,9 @@ const NULL: Object = Object { object_type: ObjectType::Null(Null) };
 pub fn eval(node: Nodes) -> Object {
     use self::Nodes::*;
     match node {
-        Program(x) => eval_statements(&x.statements),
-        BlockStatement(x) => eval_statements(&x.statements),
+        Program(x) => eval_program(&x.statements),
+        BlockStatement(x) => eval_block_statement(x),
+        ReturnStatement(x) => Object::new_return_value(eval(x.return_value.to_enum())),
         IfExpression(x) => eval_if_expression(x),
         ExpressionStatement(x) => eval(x.expression.to_enum()),
         IntegerLiteral(n) => Object::new_i32(n.value),
@@ -27,6 +28,28 @@ pub fn eval(node: Nodes) -> Object {
         }
         _ => NULL,
     }
+}
+
+fn eval_program(statements: &Vec<Box<Statement>>) -> Object {
+    let mut result: Object = NULL;
+    for statement in statements.iter() {
+        result = eval(statement.to_enum());
+        if let ObjectType::Return(x) = result.object_type {
+            return *x;
+        }
+    }
+    result
+}
+
+fn eval_block_statement(x: &BlockStatement) -> Object {
+    let mut result: Object = NULL;
+    for statement in x.statements.iter() {
+        result = eval(statement.to_enum());
+        if let ObjectType::Return(_) = result.object_type {
+            return result;
+        }
+    }
+    result
 }
 
 fn eval_if_expression(x: &IfExpression) -> Object {
@@ -109,12 +132,6 @@ fn eval_bang_operator_expression(right: Object) -> Object {
         NULL => TRUE,
         _ => FALSE,
     }
-}
-
-fn eval_statements(statements: &Vec<Box<Statement>>) -> Object {
-    // TODO: iterate statements.
-    // let result: Object;
-    statements.iter().map(|x| eval(x.to_enum())).last().unwrap()
 }
 
 #[cfg(test)]
@@ -202,6 +219,27 @@ mod tests {
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_i32(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_return_expression() {
+        let expects = [("return 10;", 10),
+                       ("return 10; 9;", 10),
+                       ("return 2 * 5; 9;", 10),
+                       ("9; return 2 * 5; 9;", 10),
+                       ("
+                        if (10 > 1) {
+                           if (10 > 1) {
+                               return 10;
+                           }
+                        }
+                        return 1;
+                       ",
+                        10)];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_i32().unwrap(), expect.1);
         }
     }
 }
