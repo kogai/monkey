@@ -15,6 +15,19 @@ pub enum ObjectType {
     Boolean(bool),
     Null(Null),
     Return(Box<Object>),
+    Error(String),
+}
+
+impl ObjectType {
+    pub fn to_type(&self) -> i32 {
+        match self {
+            &ObjectType::Integer(_) => 0,
+            &ObjectType::Boolean(_) => 1,
+            &ObjectType::Null(_) => 2,
+            &ObjectType::Return(_) => 3,
+            &ObjectType::Error(_) => 4,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,6 +42,7 @@ impl Object {
             ObjectType::Boolean(ref x) => format!("{}", x),
             ObjectType::Null(ref x) => format!("{}", x),
             ObjectType::Return(ref x) => format!("{:?}", x),
+            ObjectType::Error(ref x) => format!("Error: {}", x),
         }
     }
 
@@ -38,6 +52,10 @@ impl Object {
 
     pub fn new_return_value(x: Self) -> Self {
         Object { object_type: ObjectType::Return(Box::new(x)) }
+    }
+
+    pub fn new_error(x: String) -> Self {
+        Object { object_type: ObjectType::Error(x) }
     }
 
     pub fn to_i32(&self) -> Option<i32> {
@@ -50,6 +68,13 @@ impl Object {
     pub fn to_bool(&self) -> Option<bool> {
         match self.object_type {
             ObjectType::Boolean(ref x) => Some(x.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn to_error_message(&self) -> Option<String> {
+        match self.object_type {
+            ObjectType::Error(ref x) => Some(x.clone()),
             _ => None,
         }
     }
