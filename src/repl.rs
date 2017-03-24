@@ -4,10 +4,12 @@ use lexer;
 use parser;
 use ast::Node;
 use evaluator::eval;
+use object::Enviroment;
 
 pub fn run() {
     let prompt = ">>";
     let mut scan = String::new();
+    let mut env = Enviroment::new();
 
     print!("read print eval loop is started {}", prompt);
     io::stdout().flush().unwrap();
@@ -28,7 +30,7 @@ pub fn run() {
             continue;
         }
 
-        let evaluated = eval(program.to_enum());
+        let evaluated = eval(program.to_enum(), &env);
         println!("{:?}", evaluated.inspect());
         scan = "".to_string();
         print!("{}", prompt);

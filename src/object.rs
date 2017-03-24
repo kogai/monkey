@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter, Result};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Null;
@@ -77,6 +78,25 @@ impl Object {
             ObjectType::Error(ref x) => Some(x.clone()),
             _ => None,
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Enviroment {
+    store: HashMap<String, Object>,
+}
+
+impl Enviroment {
+    pub fn new() -> Self {
+        Enviroment { store: HashMap::new() }
+    }
+
+    pub fn get(&self, key: &String) -> Option<&Object> {
+        self.store.get(key)
+    }
+
+    pub fn set(&mut self, key: String, value: Object) -> Option<Object> {
+        self.store.insert(key, value)
     }
 }
 

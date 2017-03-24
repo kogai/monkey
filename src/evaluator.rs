@@ -1,5 +1,5 @@
 use ast::{Node, Nodes, Statement, IfExpression, BlockStatement};
-use object::{Object, ObjectType, Null};
+use object::{Object, ObjectType, Null, Enviroment};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
 const FALSE: Object = Object { object_type: ObjectType::Boolean(false) };
@@ -9,25 +9,32 @@ fn is_error(x: &Object) -> bool {
     x.object_type.to_type() == Object::new_error("".to_string()).object_type.to_type()
 }
 
-pub fn eval(node: Nodes) -> Object {
+pub fn eval(node: Nodes, env: &Enviroment) -> Object {
     use self::Nodes::*;
     match node {
-        Program(x) => eval_program(&x.statements),
-        BlockStatement(x) => eval_block_statement(x),
+        Program(x) => eval_program(&x.statements, env),
+        BlockStatement(x) => eval_block_statement(x, env),
         ReturnStatement(x) => {
-            let val = eval(x.return_value.to_enum());
+            let val = eval(x.return_value.to_enum(), env);
             if is_error(&val) {
                 return val;
             }
             Object::new_return_value(val)
         }
-        IfExpression(x) => eval_if_expression(x),
-        ExpressionStatement(x) => eval(x.expression.to_enum()),
+        LetStatement(x) => {
+            let val = eval(x.value.to_enum(), env);
+            if is_error(&val) {
+                return val;
+            }
+            NULL
+        }
+        IfExpression(x) => eval_if_expression(x, env),
+        ExpressionStatement(x) => eval(x.expression.to_enum(), env),
         IntegerLiteral(n) => Object::new_i32(n.value),
         Boolean(n) => native_bool_to_boolean_obj(n.value),
         PrefixExpression(x) => {
             let operator = x.operator.clone();
-            let right = eval(x.right.to_enum());
+            let right = eval(x.right.to_enum(), env);
             if is_error(&right) {
                 return right;
             }
@@ -35,11 +42,11 @@ pub fn eval(node: Nodes) -> Object {
         }
         InfixExpression(x) => {
             let operator = x.operator.clone();
-            let left = eval(x.left.to_enum());
+            let left = eval(x.left.to_enum(), env);
             if is_error(&left) {
                 return left;
             }
-            let right = eval(x.right.to_enum());
+            let right = eval(x.right.to_enum(), env);
             if is_error(&right) {
                 return right;
             }
@@ -49,10 +56,10 @@ pub fn eval(node: Nodes) -> Object {
     }
 }
 
-fn eval_program(statements: &Vec<Box<Statement>>) -> Object {
+fn eval_program(statements: &Vec<Box<Statement>>, env: &Enviroment) -> Object {
     let mut result: Object = NULL;
     for statement in statements.iter() {
-        result = eval(statement.to_enum());
+        result = eval(statement.to_enum(), env);
         if let ObjectType::Return(x) = result.object_type {
             return *x;
         }
@@ -63,10 +70,10 @@ fn eval_program(statements: &Vec<Box<Statement>>) -> Object {
     result
 }
 
-fn eval_block_statement(x: &BlockStatement) -> Object {
+fn eval_block_statement(x: &BlockStatement, env: &Enviroment) -> Object {
     let mut result: Object = NULL;
     for statement in x.statements.iter() {
-        result = eval(statement.to_enum());
+        result = eval(statement.to_enum(), env);
         if let ObjectType::Return(_) = result.object_type {
             return result;
         }
@@ -77,16 +84,16 @@ fn eval_block_statement(x: &BlockStatement) -> Object {
     result
 }
 
-fn eval_if_expression(x: &IfExpression) -> Object {
-    let condition = eval(x.condition.to_enum());
+fn eval_if_expression(x: &IfExpression, env: &Enviroment) -> Object {
+    let condition = eval(x.condition.to_enum(), env);
     if is_error(&condition) {
         return condition;
     }
     match is_truthy(condition) {
-        true => eval(x.consequence.to_enum()),
+        true => eval(x.consequence.to_enum(), env),
         false => {
             if let &Some(ref y) = &x.alternative {
-                return eval(y.to_enum());
+                return eval(y.to_enum(), env);
             };
             NULL
         }
@@ -184,7 +191,8 @@ mod tests {
         let l = lexer::Lexer::new(input);
         let mut parser = parser::Parser::new(l);
         let program = parser.parse_program();
-        eval(program.to_enum())
+        let mut env = Enviroment::new();
+        eval(program.to_enum(), &env)
     }
 
     #[test]
@@ -298,10 +306,23 @@ mod tests {
                             };
                         };
                        ",
-                        "unknown operator: Boolean(true) + Boolean(false)")];
+                        "unknown operator: Boolean(true) + Boolean(false)"),
+                       ("foobar", "identifier not found: foobar")];
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_error_message().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_let_statements() {
+        let expects = [("let a = 5; a;", 5),
+                       ("let a = 5 * 5; a;", 25),
+                       ("let a = 5; let b = a; b;", 5),
+                       ("let a = 5; let b = a; let c = a + b + 5; c;", 15)];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_i32().unwrap(), expect.1);
         }
     }
 }
