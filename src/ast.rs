@@ -1,594 +1,263 @@
-use std::mem;
-use std::clone::Clone;
-use std::fmt::{Debug, Formatter, Result};
 use token::Token;
 
 pub trait Node {
     fn token_literal(&self) -> String;
     fn string(&self) -> String;
-    fn to_enum(&self) -> Nodes;
-    fn box_clone(&self) -> Box<Node>;
-}
-
-impl Clone for Box<Node> {
-    fn clone(&self) -> Box<Node> {
-        self.box_clone()
-    }
-}
-
-impl PartialEq for Box<Node> {
-    fn eq(&self, other: &Box<Node>) -> bool {
-        let left = self.to_enum().to_kind_i32();
-        let right = other.to_enum().to_kind_i32();
-        left == right
-    }
-}
-
-impl Eq for Box<Node> {}
-
-pub enum Nodes<'a> {
-    Program(&'a Program),
-    BlockStatement(&'a BlockStatement),
-    LetStatement(&'a LetStatement),
-    ReturnStatement(&'a ReturnStatement),
-    IntegerLiteral(&'a IntegerLiteral),
-    Boolean(&'a Boolean),
-    Identifier(&'a Identifier),
-    EmptyExpression(&'a EmptyExpression),
-    ExpressionStatement(&'a ExpressionStatement),
-    PrefixExpression(&'a PrefixExpression),
-    InfixExpression(&'a InfixExpression),
-    IfExpression(&'a IfExpression),
-    FunctionLiteral(&'a FunctionLiteral),
-    CallExpression(&'a CallExpression),
-}
-
-impl<'a> Nodes<'a> {
-    fn to_kind_i32(&self) -> i32 {
-        match self {
-            &Nodes::Program(_) => 1,
-            &Nodes::BlockStatement(_) => 2,
-            &Nodes::LetStatement(_) => 3,
-            &Nodes::ReturnStatement(_) => 4,
-            &Nodes::IntegerLiteral(_) => 5,
-            &Nodes::Boolean(_) => 6,
-            &Nodes::Identifier(_) => 7,
-            &Nodes::EmptyExpression(_) => 8,
-            &Nodes::ExpressionStatement(_) => 9,
-            &Nodes::PrefixExpression(_) => 10,
-            &Nodes::InfixExpression(_) => 11,
-            &Nodes::IfExpression(_) => 12,
-            &Nodes::FunctionLiteral(_) => 13,
-            &Nodes::CallExpression(_) => 14,
-        }
-    }
 }
 
 pub trait Statement: Node {
-    fn statement_node(&self);
-}
-
-impl Clone for Box<Statement> {
-    fn clone(&self) -> Box<Statement> {
-        unsafe { mem::transmute::<Box<Node>, Box<Statement>>(self.box_clone()) }
-    }
-}
-
-impl PartialEq for Box<Statement> {
-    fn eq(&self, other: &Box<Statement>) -> bool {
-        let left = self.to_enum().to_kind_i32();
-        let right = other.to_enum().to_kind_i32();
-        left == right
-    }
-}
-
-impl Eq for Box<Statement> {}
-
-pub trait Expression: Node {
-    fn expression_node(&self);
-}
-
-impl Clone for Box<Expression> {
-    fn clone(&self) -> Box<Expression> {
-        unsafe { mem::transmute::<Box<Node>, Box<Expression>>(self.box_clone()) }
-    }
-}
-
-pub struct Program {
-    pub statements: Vec<Box<Statement>>,
-}
-
-impl Debug for Program {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "Program {{ statements: {} }}", self.statements.len())
-    }
-}
-
-impl Clone for Program {
-    fn clone(&self) -> Self {
-        let statemnts = (*self.statements).into_iter();
-        let mut cloned: Vec<Box<Statement>> = vec![];
-
-        for statement in statemnts {
-            let stm = (*statement).clone();
-            cloned.push(stm);
-        }
-        Program { statements: cloned }
-    }
-}
-
-impl PartialEq for Program {
-    fn eq(&self, other: &Program) -> bool {
-        let statemnts = (*self.statements).into_iter();
-        let others = (*other.statements).into_iter();
-
-        if statemnts.len() != others.len() {
-            return false;
-        }
-
-        let mut ziped = statemnts.zip(others);
-        ziped.all(|x| x.0 == x.1)
-    }
-}
-
-impl Eq for Program {}
-
-impl Node for Program {
-    fn token_literal(&self) -> String {
-        match self.statements.first() {
-            Some(s) => s.token_literal(),
-            None => "".to_string(),
-        }
-    }
-
-    fn string(&self) -> String {
-        (&self.statements)
-            .into_iter()
-            .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::Program(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-#[derive(PartialEq, Eq, Clone)]
-pub struct BlockStatement {
-    pub token: Token,
-    pub statements: Vec<Box<Statement>>,
-}
-
-impl Debug for BlockStatement {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f,
-               "BlockStatement {{ statements: {} }}",
-               self.statements.len())
-    }
-}
-
-impl Node for BlockStatement {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        let statemnts = &self.statements;
-        statemnts.into_iter()
-            .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::BlockStatement(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Statement for BlockStatement {
     fn statement_node(&self) {}
 }
 
+pub trait Expression: Node {
+    fn expression_node(&self) {}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Nodes {
+    Program(Program),
+}
+
+impl Node for Nodes {
+    fn token_literal(&self) -> String {
+        match self {
+            &Nodes::Program(ref x) => {
+                match x.statements.first() {
+                    Some(s) => s.token_literal(),
+                    _ => "".to_string(),
+                }
+            }
+        }
+    }
+
+    fn string(&self) -> String {
+        match self {
+            &Nodes::Program(ref x) => fold_statements(&x.statements),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Statements {
+    BlockStatement(BlockStatement),
+    LetStatement(LetStatement),
+    ReturnStatement(ReturnStatement),
+    ExpressionStatement(ExpressionStatement),
+}
+
+impl Node for Statements {
+    fn token_literal(&self) -> String {
+        match self {
+            &Statements::BlockStatement(ref x) => x.token.literal.clone(),
+            &Statements::LetStatement(ref x) => x.token.literal.clone(),
+            &Statements::ReturnStatement(ref x) => x.token.literal.clone(),
+            &Statements::ExpressionStatement(ref x) => x.token.literal.clone(),
+        }
+    }
+
+    fn string(&self) -> String {
+        match self {
+            &Statements::BlockStatement(ref x) => fold_statements(&x.statements),
+            &Statements::LetStatement(ref x) => {
+                format!("{} {} = {}",
+                        self.token_literal(),
+                        x.name.to_enum().string(),
+                        x.value.string())
+            }
+            &Statements::ReturnStatement(ref x) => {
+                format!("{} {};", self.token_literal(), x.return_value.string())
+            }
+            &Statements::ExpressionStatement(ref x) => format!("{}", x.expression.string()),
+        }
+    }
+}
+
+impl Statement for Statements {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Expressions {
+    Identifier(Identifier),
+    IntegerLiteral(IntegerLiteral),
+    PrefixExpression(PrefixExpression),
+    InfixExpression(InfixExpression),
+    Boolean(Boolean),
+    IfExpression(IfExpression),
+    FunctionLiteral(FunctionLiteral),
+    CallExpression(CallExpression),
+}
+
+impl Node for Expressions {
+    fn token_literal(&self) -> String {
+        match self {
+            &Expressions::Identifier(ref x) => x.token.literal.clone(),
+            &Expressions::IntegerLiteral(ref x) => x.token.literal.clone(),
+            &Expressions::PrefixExpression(ref x) => x.token.literal.clone(),
+            &Expressions::InfixExpression(ref x) => x.token.literal.clone(),
+            &Expressions::Boolean(ref x) => x.token.literal.clone(),
+            &Expressions::IfExpression(ref x) => x.token.literal.clone(),
+            &Expressions::FunctionLiteral(ref x) => x.token.literal.clone(),
+            &Expressions::CallExpression(ref x) => x.token.literal.clone(),
+        }
+    }
+
+    fn string(&self) -> String {
+        match self {
+            &Expressions::Identifier(ref x) => x.value.clone(),
+            &Expressions::IntegerLiteral(ref x) => format!("{}", x.value),
+            &Expressions::PrefixExpression(ref x) => {
+                format!("({}{})", x.operator, x.right.string())
+            }
+            &Expressions::InfixExpression(ref x) => {
+                format!("({} {} {})", x.left.string(), x.operator, x.right.string())
+            }
+            &Expressions::Boolean(ref x) => format!("{}", x.value),
+            &Expressions::IfExpression(ref x) => {
+                match x.alternative {
+                    Some(ref a) => {
+                        format!("if {} {} else {}",
+                                x.condition.string(),
+                                x.consequence.to_enum().string(),
+                                a.to_enum().string())
+                    }
+                    None => {
+                        format!("if {} {}",
+                                x.condition.string(),
+                                x.consequence.to_enum().string())
+                    }
+                }
+            }
+            &Expressions::FunctionLiteral(ref x) => {
+                let parameters_string = (&x.parameters)
+                    .into_iter()
+                    .map(|p| p.to_enum().string())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+
+                format!("{}({}) {}",
+                        x.to_enum().token_literal(),
+                        parameters_string,
+                        x.body.to_enum().string())
+            }
+
+            &Expressions::CallExpression(ref x) => {
+                let arguments_string = (&x.arguments)
+                    .into_iter()
+                    .map(|p| p.string())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!("{}({})", x.function.string(), arguments_string)
+            }
+        }
+    }
+}
+
+impl Expression for Expressions {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Program {
+    pub statements: Vec<Statements>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BlockStatement {
+    pub token: Token,
+    pub statements: Vec<Statements>,
+}
+
+impl BlockStatement {
+    fn to_enum(&self) -> Statements {
+        Statements::BlockStatement(self.clone())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LetStatement {
     pub token: Token,
     pub name: Identifier,
-    pub value: Box<Expression>,
+    pub value: Expressions,
 }
 
-impl Node for LetStatement {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        format!("{} {} = {}",
-                self.token_literal(),
-                self.name.string(),
-                self.value.string())
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::LetStatement(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Clone for LetStatement {
-    fn clone(&self) -> Self {
-        unimplemented!();
-    }
-}
-
-impl Statement for LetStatement {
-    fn statement_node(&self) {}
-}
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReturnStatement {
     pub token: Token,
-    pub return_value: Box<Expression>,
+    pub return_value: Expressions,
 }
 
-impl Node for ReturnStatement {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        format!("{} {};", self.token_literal(), self.return_value.string())
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::ReturnStatement(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExpressionStatement {
+    pub token: Token,
+    pub expression: Expressions,
 }
 
-impl Clone for ReturnStatement {
-    fn clone(&self) -> Self {
-        unimplemented!();
-    }
-}
-
-impl Statement for ReturnStatement {
-    fn statement_node(&self) {}
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Identifier {
     pub token: Token,
     pub value: String,
 }
 
-impl Node for Identifier {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        format!("{}", self.value)
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::Identifier(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
+impl Identifier {
+    fn to_enum(&self) -> Expressions {
+        Expressions::Identifier(self.clone())
     }
 }
 
-impl Expression for Identifier {
-    fn expression_node(&self) {}
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct EmptyExpression {}
-
-impl Node for EmptyExpression {
-    fn token_literal(&self) -> String {
-        "empty".to_string()
-    }
-
-    fn string(&self) -> String {
-        format!("{}", self.token_literal())
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::EmptyExpression(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Expression for EmptyExpression {
-    fn expression_node(&self) {}
-}
-
-#[derive(Clone)]
-pub struct ExpressionStatement {
-    pub token: Token,
-    pub expression: Box<Expression>,
-}
-
-impl Node for ExpressionStatement {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        format!("{}", self.expression.string())
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::ExpressionStatement(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Statement for ExpressionStatement {
-    fn statement_node(&self) {}
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IntegerLiteral {
     pub token: Token,
     pub value: i32,
 }
 
-impl Node for IntegerLiteral {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        format!("{}", self.value)
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::IntegerLiteral(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Expression for IntegerLiteral {
-    fn expression_node(&self) {}
-}
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrefixExpression {
     pub token: Token,
     pub operator: String,
-    pub right: Box<Expression>,
+    pub right: Box<Expressions>,
 }
 
-impl Node for PrefixExpression {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        format!("({}{})", self.operator, self.right.string())
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::PrefixExpression(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Clone for PrefixExpression {
-    fn clone(&self) -> Self {
-        unimplemented!();
-    }
-}
-
-impl Expression for PrefixExpression {
-    fn expression_node(&self) {}
-}
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InfixExpression {
     pub token: Token,
     pub operator: String,
-    pub left: Box<Expression>,
-    pub right: Box<Expression>,
+    pub left: Box<Expressions>,
+    pub right: Box<Expressions>,
 }
 
-impl Node for InfixExpression {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        format!("({} {} {})",
-                self.left.string(),
-                self.operator,
-                self.right.string())
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::InfixExpression(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Clone for InfixExpression {
-    fn clone(&self) -> Self {
-        unimplemented!();
-    }
-}
-
-impl Expression for InfixExpression {
-    fn expression_node(&self) {}
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Boolean {
     pub token: Token,
     pub value: bool,
 }
 
-impl Node for Boolean {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        format!("{}", self.value)
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::Boolean(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Expression for Boolean {
-    fn expression_node(&self) {}
-}
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IfExpression {
     pub token: Token,
-    pub condition: Box<Expression>,
+    pub condition: Box<Expressions>,
     pub consequence: BlockStatement,
     pub alternative: Option<BlockStatement>,
 }
 
-impl Node for IfExpression {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        match self.alternative {
-            Some(ref x) => {
-                format!("if {} {} else {}",
-                        self.condition.string(),
-                        self.consequence.string(),
-                        x.string())
-            }
-            None => {
-                format!("if {} {}",
-                        self.condition.string(),
-                        self.consequence.string())
-            }
-        }
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::IfExpression(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Clone for IfExpression {
-    fn clone(&self) -> Self {
-        unimplemented!();
-    }
-}
-
-impl Expression for IfExpression {
-    fn expression_node(&self) {}
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionLiteral {
     pub token: Token,
     pub parameters: Vec<Identifier>,
     pub body: BlockStatement,
 }
 
-impl Node for FunctionLiteral {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        let parameters = &self.parameters;
-        let parameters_string =
-            parameters.into_iter().map(|p| p.string()).collect::<Vec<String>>().join(", ");
-        format!("{}({}) {}",
-                self.token_literal(),
-                parameters_string,
-                self.body.string())
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::FunctionLiteral(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
+impl FunctionLiteral {
+    fn to_enum(&self) -> Expressions {
+        Expressions::FunctionLiteral(self.clone())
     }
 }
 
-impl Expression for FunctionLiteral {
-    fn expression_node(&self) {}
-}
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallExpression {
     pub token: Token,
-    pub function: Box<Expression>,
-    pub arguments: Vec<Box<Expression>>,
+    pub function: Box<Expressions>,
+    pub arguments: Vec<Box<Expressions>>,
 }
 
-impl Expression for CallExpression {
-    fn expression_node(&self) {}
-}
-
-impl Node for CallExpression {
-    fn token_literal(&self) -> String {
-        self.token.literal.clone()
-    }
-
-    fn string(&self) -> String {
-        let arguments = &self.arguments;
-        let arguments_string =
-            arguments.into_iter().map(|p| p.string()).collect::<Vec<String>>().join(", ");
-        format!("{}({})", self.function.string(), arguments_string)
-    }
-
-    fn to_enum(&self) -> Nodes {
-        Nodes::CallExpression(self)
-    }
-
-    fn box_clone(&self) -> Box<Node> {
-        Box::new((*self).clone())
-    }
-}
-
-impl Clone for CallExpression {
-    fn clone(&self) -> Self {
-        unimplemented!();
-    }
+fn fold_statements(x: &Vec<Statements>) -> String {
+    x.into_iter()
+        .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
 }
 
