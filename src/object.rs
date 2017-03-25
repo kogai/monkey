@@ -13,7 +13,7 @@ impl Display for Null {
 
 /* Maybe unsafe... */
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Function {
+pub struct Function {
     parameters: Vec<Identifier>,
     body: BlockStatement,
     env: Enviroment,

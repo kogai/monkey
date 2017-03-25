@@ -1,4 +1,4 @@
-use ast::{Node, Nodes, Statement, IfExpression, BlockStatement, Identifier};
+use ast::{Node, Nodes, Statement, IfExpression, BlockStatement, Identifier, Expression};
 use object::{Object, ObjectType, Null, Enviroment};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
@@ -55,8 +55,33 @@ pub fn eval(node: Nodes, env: &mut Enviroment) -> Object {
             eval_infix_expression(operator, left, right)
         }
         FunctionLiteral(x) => Object::new_function(x.parameters.clone(), x.body.clone(), env),
+        CallExpression(x) => {
+            let func = eval(x.function.to_enum(), env);
+            if is_error(&func) {
+                return func;
+            }
+            let args = eval_expression(&x.arguments, env);
+            match args {
+                Ok(_) => NULL,
+                Err(x) => x,
+            }
+        }
         _ => NULL,
     }
+}
+
+fn eval_expression(expressions: &Vec<Box<Expression>>,
+                   env: &mut Enviroment)
+                   -> Result<Vec<Object>, Object> {
+    let mut result: Vec<Object> = vec![];
+    for expression in expressions.iter() {
+        let evaluated = eval(expression.to_enum(), env);
+        if is_error(&evaluated) {
+            return Err(evaluated);
+        }
+        result.push(evaluated);
+    }
+    Ok(result)
 }
 
 fn eval_program(statements: &Vec<Box<Statement>>, env: &mut Enviroment) -> Object {
@@ -330,6 +355,20 @@ mod tests {
                        ("let a = 5 * 5; a;", 25),
                        ("let a = 5; let b = a; b;", 5),
                        ("let a = 5; let b = a; let c = a + b + 5; c;", 15)];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_i32().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_function_literal() {
+        let expects = [("let identity = fn(x) {x;}; identity(5);", 5),
+                       ("let identity = fn(x) {return x;}; identity(5);", 5),
+                       ("let double = fn(x) {x * 2;}; double(5);", 10),
+                       ("let add = fn(x, y) {x + y;}; add(5, 5);", 10),
+                       ("let add = fn(x, y) {x + y;}; add(5 + 5, add(5, 5));", 20),
+                       ("fn(x) {x;}(5)", 5)];
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_i32().unwrap(), expect.1);
