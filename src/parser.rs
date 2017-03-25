@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use token::{Token, TokenType};
 use lexer::Lexer;
-use ast::{Program, Statement, Expression, LetStatement, ReturnStatement, ExpressionStatement,
-          Identifier, PrefixExpression, InfixExpression, EmptyExpression, IntegerLiteral, Boolean,
-          IfExpression, BlockStatement, FunctionLiteral, CallExpression};
+use ast::{Program, LetStatement, ReturnStatement, ExpressionStatement, Identifier, PrefixExpression,
+          InfixExpression, IntegerLiteral, Boolean, IfExpression, BlockStatement, FunctionLiteral,
+          CallExpression, Statements, Expressions};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -84,7 +84,7 @@ impl Parser {
     }
 
     pub fn parse_program(&mut self) -> Program {
-        let mut statements: Vec<Box<Statement>> = vec![];
+        let mut statements: Vec<Statements> = vec![];
 
         while self.current_token.token_type != TokenType::EOF {
             let statement = self.parse_statement();
@@ -95,11 +95,11 @@ impl Parser {
         Program { statements: statements }
     }
 
-    fn parse_statement(&mut self) -> Box<Statement> {
+    fn parse_statement(&mut self) -> Statements {
         match self.current_token.token_type {
-            TokenType::LET => Box::new(self.parse_let_statement()),
-            TokenType::RETURN => Box::new(self.parse_return_statement()),
-            _ => Box::new(self.parse_expression_statement()),
+            TokenType::LET => Statements::new_let_statement(self.parse_let_statement()),
+            TokenType::RETURN => Statements::new_return_statement(self.parse_return_statement()),
+            _ => Statements::new_expression_statement(self.parse_expression_statement()),
         }
     }
 
@@ -117,9 +117,9 @@ impl Parser {
         }
     }
 
-    fn parse_expression(&mut self, precedence: Precedence) -> Box<Expression> {
+    fn parse_expression(&mut self, precedence: Precedence) -> Expressions {
         let token_type = self.current_token.token_type.clone();
-        let mut left = self.parse_prefix(token_type);
+        let mut left = self.parse_prefix(token_type).unwrap();
 
         while !self.peek_token_is(TokenType::SEMICOLON) && precedence < self.peek_precedence() {
             let token_type = self.peek_token.token_type.clone();
@@ -134,34 +134,34 @@ impl Parser {
         left
     }
 
-    fn parse_prefix(&mut self, t: TokenType) -> Box<Expression> {
+    fn parse_prefix(&mut self, t: TokenType) -> Option<Expressions> {
         use self::TokenType::*;
         match t {
-            IDENT(_) => self.parse_identifier(),
-            INT(_) => self.parse_integer_literal().unwrap_or(Box::new(EmptyExpression {})),
-            BANG => self.parse_prefix_expression(),
-            MINUS => self.parse_prefix_expression(),
-            TRUE => self.parse_boolean(),
-            FALSE => self.parse_boolean(),
+            IDENT(_) => Some(self.parse_identifier()),
+            INT(_) => self.parse_integer_literal(),
+            BANG => Some(self.parse_prefix_expression()),
+            MINUS => Some(self.parse_prefix_expression()),
+            TRUE => Some(self.parse_boolean()),
+            FALSE => Some(self.parse_boolean()),
             LPAREN => self.parse_group_expression(),
-            IF => self.parse_if_expression(),
-            FUNCTION => self.parse_function_literal(),
-            _ => Box::new(EmptyExpression {}),
+            IF => Some(self.parse_if_expression()),
+            FUNCTION => Some(self.parse_function_literal()),
+            _ => None,
         }
     }
 
-    fn parse_function_literal(&mut self) -> Box<Expression> {
+    fn parse_function_literal(&mut self) -> Expressions {
         let token = self.current_token.clone();
         self.expect_peek_token(TokenType::LPAREN);
         let parameters = self.parse_function_parameters();
         self.expect_peek_token(TokenType::LBRACE);
         let body = self.parse_block_statement();
 
-        Box::new(FunctionLiteral {
-                     token: token,
-                     parameters: parameters,
-                     body: body,
-                 })
+        Expressions::new_function_literal(FunctionLiteral {
+                                              token: token,
+                                              parameters: parameters,
+                                              body: body,
+                                          })
     }
 
     fn parse_function_parameters(&mut self) -> Vec<Identifier> {
@@ -189,14 +189,14 @@ impl Parser {
         identifiers
     }
 
-    fn parse_boolean(&self) -> Box<Expression> {
-        Box::new(Boolean {
-                     token: self.current_token.clone(),
-                     value: self.current_token_is(TokenType::TRUE),
-                 })
+    fn parse_boolean(&self) -> Expressions {
+        Expressions::new_boolean(Boolean {
+                                     token: self.current_token.clone(),
+                                     value: self.current_token_is(TokenType::TRUE),
+                                 })
     }
 
-    fn parse_if_expression(&mut self) -> Box<Expression> {
+    fn parse_if_expression(&mut self) -> Expressions {
         let token = self.current_token.clone();
         self.expect_peek_token(TokenType::LPAREN);
         self.next_token();
@@ -214,17 +214,17 @@ impl Parser {
             false => None,
         };
 
-        Box::new(IfExpression {
-                     token: token,
-                     condition: condition,
-                     consequence: consequence,
-                     alternative: alternative,
-                 })
+        Expressions::new_if_expression(IfExpression {
+                                           token: token,
+                                           condition: Box::new(condition),
+                                           consequence: consequence,
+                                           alternative: alternative,
+                                       })
     }
 
     fn parse_block_statement(&mut self) -> BlockStatement {
         let token = self.current_token.clone();
-        let mut statements: Vec<Box<Statement>> = vec![];
+        let mut statements: Vec<Statements> = vec![];
         self.next_token();
 
         while !self.current_token_is(TokenType::RBRACE) {
@@ -239,36 +239,36 @@ impl Parser {
         }
     }
 
-    fn parse_call_expression(&mut self, left: Box<Expression>) -> Box<Expression> {
+    fn parse_call_expression(&mut self, left: Expressions) -> Expressions {
         let token = self.current_token.clone();
         let arguments = self.parse_call_arguments();
-        Box::new(CallExpression {
-                     token: token,
-                     function: left,
-                     arguments: arguments,
-                 })
+        Expressions::new_call_expression(CallExpression {
+                                             token: token,
+                                             function: Box::new(left),
+                                             arguments: arguments,
+                                         })
     }
 
-    fn parse_call_arguments(&mut self) -> Vec<Box<Expression>> {
-        let mut arguments: Vec<Box<Expression>> = vec![];
+    fn parse_call_arguments(&mut self) -> Vec<Box<Expressions>> {
+        let mut arguments: Vec<Box<Expressions>> = vec![];
         if self.peek_token_is(TokenType::RPAREN) {
             self.next_token();
             return arguments;
         }
         self.next_token();
-        arguments.push(self.parse_expression(Precedence::LOWEST));
+        arguments.push(Box::new(self.parse_expression(Precedence::LOWEST)));
 
         while self.peek_token_is(TokenType::COMMA) {
             self.next_token();
             self.next_token();
-            arguments.push(self.parse_expression(Precedence::LOWEST));
+            arguments.push(Box::new(self.parse_expression(Precedence::LOWEST)));
         }
 
         self.expect_peek_token(TokenType::RPAREN);
         arguments
     }
 
-    fn parse_infix(&mut self, t: TokenType, left: Box<Expression>) -> Box<Expression> {
+    fn parse_infix(&mut self, t: TokenType, left: Expressions) -> Expressions {
         use self::TokenType::*;
         match t {
             PLUS => self.parse_infix_expression(left),
@@ -284,52 +284,52 @@ impl Parser {
         }
     }
 
-    fn parse_prefix_expression(&mut self) -> Box<Expression> {
+    fn parse_prefix_expression(&mut self) -> Expressions {
         let current_token = self.current_token.clone();
         let operator = self.current_token.literal.clone();
 
         self.next_token();
 
         let expression = self.parse_expression(Precedence::PREFIX);
-        Box::new(PrefixExpression {
-                     token: current_token,
-                     operator: operator,
-                     right: expression,
-                 })
+        Expressions::new_prefix_expression(PrefixExpression {
+                                               token: current_token,
+                                               operator: operator,
+                                               right: Box::new(expression),
+                                           })
     }
 
-    fn parse_infix_expression(&mut self, left: Box<Expression>) -> Box<Expression> {
+    fn parse_infix_expression(&mut self, left: Expressions) -> Expressions {
         let current_token = self.current_token.clone();
         let operator = self.current_token.literal.clone();
         let precendence = self.current_precedence();
         self.next_token();
         let right = self.parse_expression(precendence);
 
-        Box::new(InfixExpression {
-                     token: current_token,
-                     operator: operator,
-                     left: left,
-                     right: right,
-                 })
+        Expressions::new_infix_expression(InfixExpression {
+                                              token: current_token,
+                                              operator: operator,
+                                              left: Box::new(left),
+                                              right: Box::new(right),
+                                          })
     }
 
-    fn parse_identifier(&mut self) -> Box<Expression> {
-        Box::new(Identifier {
-                     token: self.current_token.clone(),
-                     value: self.current_token.literal.clone(),
-                 })
+    fn parse_identifier(&mut self) -> Expressions {
+        Expressions::new_identifier(Identifier {
+                                        token: self.current_token.clone(),
+                                        value: self.current_token.literal.clone(),
+                                    })
     }
 
-    fn parse_integer_literal(&mut self) -> Option<Box<Expression>> {
+    fn parse_integer_literal(&mut self) -> Option<Expressions> {
         let current_token = self.current_token.clone();
         let value = i32::from_str(self.current_token.literal.as_str().clone());
 
         match value {
             Ok(s) => {
-                Some(Box::new(IntegerLiteral {
-                                  token: current_token,
-                                  value: s,
-                              }))
+                Some(Expressions::new_integer_literal(IntegerLiteral {
+                                                          token: current_token,
+                                                          value: s,
+                                                      }))
             }
             Err(_) => {
                 self.errors.push(format!("could not parse {:?} as integer", current_token));
@@ -380,12 +380,12 @@ impl Parser {
         }
     }
 
-    fn parse_group_expression(&mut self) -> Box<Expression> {
+    fn parse_group_expression(&mut self) -> Option<Expressions> {
         self.next_token();
         let expression = self.parse_expression(Precedence::LOWEST);
         match self.expect_peek_token(TokenType::RPAREN) {
-            true => expression,
-            false => Box::new(EmptyExpression {}),
+            true => Some(expression),
+            false => None,
         }
     }
 
@@ -420,7 +420,6 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use std::mem;
     use super::*;
     use ast::Node;
     use lexer;
@@ -480,12 +479,14 @@ mod tests {
 
         for i in 0..statements_count {
             let expect = expects[i];
-            let statement =
-                unsafe { mem::transmute::<&Box<Statement>, &Box<LetStatement>>(&statements[i]) };
-
-            assert_eq!(statement.token_literal(), "let");
-            assert_eq!(statement.name.value, expect);
-            assert_eq!(statement.name.token_literal(), expect);
+            let statement = &statements[i];
+            if let Statements::LetStatement(ls) = statement.clone() {
+                assert_eq!(statement.token_literal(), "let");
+                assert_eq!(ls.name.value, expect);
+                assert_eq!(ls.name.to_enum().token_literal(), expect);
+            } else {
+                assert!(false);
+            }
         }
     }
 
@@ -522,50 +523,12 @@ mod tests {
             let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let statements = program.statements;
-            let statement =
-                unsafe { mem::transmute::<&Box<Statement>, &Box<ReturnStatement>>(&statements[0]) };
+            let statement = &statements[0];
             assert_eq!(statement.token_literal(), "return");
-            assert_eq!(statement.return_value.string(), expect.1);
+            if let Statements::ReturnStatement(x) = statement.clone() {
+                assert_eq!(x.return_value.string(), expect.1);
+            }
         }
-    }
-
-    #[test]
-    fn it_should_parse_expression_statement() {
-        let l = lexer::Lexer::new("foobar;".to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
-
-        assert_eq!(statements_count, 1);
-        let statement =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
-
-        let identifier =
-            unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&statement.expression) };
-        assert_eq!(identifier.value, "foobar");
-        assert_eq!(identifier.token_literal(), "foobar");
-    }
-
-    #[test]
-    fn it_should_parse_integer_literal_expression() {
-        let l = lexer::Lexer::new("5;".to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
-
-        assert_eq!(statements_count, 1);
-        let statement =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
-
-        let identifier = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&statement.expression)
-        };
-        assert_eq!(identifier.value, 5);
-        assert_eq!(identifier.token_literal(), "5");
     }
 
     #[test]
@@ -578,13 +541,37 @@ mod tests {
         let statements_count = statements.len();
 
         assert_eq!(statements_count, 1);
-        let statement =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
+        let statement = &statements[0];
+        if let Statements::ExpressionStatement(x) = statement.clone() {
+            let identifier = x.expression;
+            assert_eq!(identifier.token_literal(), "foobar");
+            if let Expressions::Identifier(y) = identifier {
+                return assert_eq!(y.value, "foobar");
+            }
+        }
+        assert!(false);
+    }
 
-        let identifier =
-            unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&statement.expression) };
-        assert_eq!(identifier.value, "foobar");
-        assert_eq!(identifier.token_literal(), "foobar");
+    #[test]
+    fn it_should_parse_integer_literal_expression() {
+        let l = lexer::Lexer::new("5;".to_string());
+
+        let mut parser = Parser::new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+
+        assert_eq!(statements_count, 1);
+
+        let statement = &statements[0];
+        if let Statements::ExpressionStatement(x) = statement.clone() {
+            let identifier = x.expression;
+            assert_eq!(identifier.token_literal(), "5");
+            if let Expressions::IntegerLiteral(y) = identifier {
+                return assert_eq!(y.value, 5);
+            }
+        }
+        assert!(false);
     }
 
     #[test]
@@ -600,12 +587,15 @@ mod tests {
             let statements_count = statements.len();
 
             assert_eq!(statements_count, 1);
-            let statement = unsafe {
-                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
-            };
-            let boolean =
-                unsafe { mem::transmute::<&Box<Expression>, &Box<Boolean>>(&statement.expression) };
-            assert_eq!(boolean.value, expect.1);
+            let statement = &statements[0];
+            if let Statements::ExpressionStatement(x) = statement.clone() {
+                let identifier = x.expression;
+                if let Expressions::Boolean(y) = identifier {
+                    assert_eq!(y.value, expect.1);
+                    continue;
+                }
+            }
+            assert!(false);
         }
     }
 
@@ -618,30 +608,24 @@ mod tests {
         let statements_count = statements.len();
         assert_eq!(statements_count, 1);
 
-        let expression =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
-        let statement = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<IfExpression>>(&expression.expression)
-        };
-        let condition = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.condition)
-        };
-
-        let left = unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.left) };
-        let right =
-            unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.right) };
-
-        assert_eq!(left.value, "x");
-        assert_eq!(condition.operator, "<");
-        assert_eq!(right.value, "y");
-
-        let consequence =
-            unsafe {
-                mem::transmute::<&Box<Statement>,
-                                 &Box<ExpressionStatement>>(&statement.consequence.statements[0])
-            };
-        assert_eq!(consequence.token.token_type,
-                   TokenType::IDENT("x".to_string()));
+        if let Statements::ExpressionStatement(expression) = (&statements[0]).clone() {
+            if let Expressions::IfExpression(statement) = expression.expression {
+                if let Expressions::InfixExpression(condition) = *statement.condition {
+                    assert_eq!(condition.operator, "<");
+                    if let Expressions::Identifier(left) = *condition.left {
+                        assert_eq!(left.value, "x");
+                    }
+                    if let Expressions::Identifier(right) = *condition.right {
+                        assert_eq!(right.value, "y");
+                    }
+                }
+                if let Statements::ExpressionStatement(consequence) =
+                    (&statement.consequence.statements[0]).clone() {
+                    assert_eq!(consequence.token.token_type,
+                               TokenType::IDENT("x".to_string()));
+                }
+            }
+        }
     }
 
     #[test]
@@ -653,41 +637,34 @@ mod tests {
         let statements_count = statements.len();
         assert_eq!(statements_count, 1);
 
-        let expression =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
-        let statement = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<IfExpression>>(&expression.expression)
-        };
-        let condition = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.condition)
-        };
-
-        let left = unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.left) };
-        let right =
-            unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&condition.right) };
-
-        assert_eq!(left.value, "x");
-        assert_eq!(condition.operator, "<");
-        assert_eq!(right.value, "y");
-
-        let consequence =
-            unsafe {
-                mem::transmute::<&Box<Statement>,
-                                 &Box<ExpressionStatement>>(&statement.consequence.statements[0])
-            };
-        assert_eq!(consequence.token.token_type,
-                   TokenType::IDENT("x".to_string()));
-
-        let alternative =
-            unsafe {
-                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statement.alternative
-                                                                                  .as_ref()
-                                                                                  .unwrap()
-                                                                                  .statements
-                                                                                  [0])
-            };
-        assert_eq!(alternative.token.token_type,
-                   TokenType::IDENT("y".to_string()));
+        if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+            if let Expressions::IfExpression(statement) = expression.expression {
+                if let Expressions::InfixExpression(condition) = *statement.condition {
+                    assert_eq!(condition.operator, "<");
+                    if let Expressions::Identifier(left) = *condition.left {
+                        assert_eq!(left.value, "x");
+                    }
+                    if let Expressions::Identifier(right) = *condition.right {
+                        assert_eq!(right.value, "y");
+                    }
+                }
+                if let Statements::ExpressionStatement(consequence) =
+                    statement.consequence.statements[0].clone() {
+                    assert_eq!(consequence.token.token_type,
+                               TokenType::IDENT("x".to_string()));
+                }
+                if let Statements::ExpressionStatement(alternative) =
+                    statement.alternative
+                        .as_ref()
+                        .unwrap()
+                        .statements
+                        [0]
+                            .clone() {
+                    assert_eq!(alternative.token.token_type,
+                               TokenType::IDENT("y".to_string()));
+                }
+            }
+        }
     }
 
     #[test]
@@ -699,36 +676,30 @@ mod tests {
         let statements_count = statements.len();
         assert_eq!(statements_count, 1);
 
-        let expression =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
-        let function = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<FunctionLiteral>>(&expression.expression)
-        };
-        assert_eq!(function.parameters.len(), 2);
-        assert_eq!(&function.parameters[0].value, "x");
-        assert_eq!(&function.parameters[1].value, "y");
-        assert_eq!(function.body.statements.len(), 1);
+        if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+            if let Expressions::IfExpression(statement) = expression.expression {
+                if let Expressions::FunctionLiteral(function) = *statement.condition {
+                    assert_eq!(function.parameters.len(), 2);
+                    assert_eq!(&function.parameters[0].value, "x");
+                    assert_eq!(&function.parameters[1].value, "y");
+                    assert_eq!(function.body.statements.len(), 1);
 
-        let body_statements =
-            unsafe {
-                mem::transmute::<&Box<Statement>,
-                                 &Box<ExpressionStatement>>(&function.body.statements[0])
-            };
-        let infix_expression =
-            unsafe {
-                mem::transmute::<&Box<Expression>,
-                                 &Box<InfixExpression>>(&body_statements.expression)
-            };
-
-        let left =
-            unsafe { mem::transmute::<&Box<Expression>, &Box<Identifier>>(&infix_expression.left) };
-        let right = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&infix_expression.right)
-        };
-
-        assert_eq!(left.value, "x");
-        assert_eq!(infix_expression.operator, "+");
-        assert_eq!(right.value, "y");
+                    if let Statements::ExpressionStatement(body_statements) =
+                        function.body.statements[0].clone() {
+                        if let Expressions::InfixExpression(infix_expression) =
+                            body_statements.expression {
+                            if let Expressions::Identifier(left) = *infix_expression.left {
+                                assert_eq!(left.value, "x");
+                            }
+                            if let Expressions::Identifier(right) = *infix_expression.right {
+                                assert_eq!(right.value, "y");
+                            }
+                            assert_eq!(infix_expression.operator, "+");
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
@@ -740,18 +711,16 @@ mod tests {
         let statements_count = statements.len();
         assert_eq!(statements_count, 1);
 
-        let expression =
-            unsafe { mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0]) };
-        let call_expression = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<CallExpression>>(&expression.expression)
-        };
-        let identifier = unsafe {
-            mem::transmute::<&Box<Expression>, &Box<Identifier>>(&call_expression.function)
-        };
-        assert_eq!(identifier.value, "add");
-        assert_eq!(&call_expression.arguments[0].string(), "1");
-        assert_eq!(&call_expression.arguments[1].string(), "(2 * 3)");
-        assert_eq!(&call_expression.arguments[2].string(), "(4 + 5)");
+        if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+            if let Expressions::CallExpression(call_expression) = expression.expression {
+                if let Expressions::Identifier(identifier) = *call_expression.function {
+                    assert_eq!(identifier.value, "add");
+                }
+                assert_eq!(&call_expression.arguments[0].string(), "1");
+                assert_eq!(&call_expression.arguments[1].string(), "(2 * 3)");
+                assert_eq!(&call_expression.arguments[2].string(), "(4 + 5)");
+            }
+        }
     }
 
     #[test]
@@ -765,19 +734,17 @@ mod tests {
             let program = parser.parse_program();
             let statements = program.statements;
             let statements_count = statements.len();
-
             assert_eq!(statements_count, 1);
-            let statement = unsafe {
-                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
-            };
-            let prefix = unsafe {
-                mem::transmute::<&Box<Expression>, &Box<PrefixExpression>>(&statement.expression)
-            };
-            assert_eq!(prefix.operator, expect.1);
-            let integer =
-                unsafe { mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&prefix.right) };
-            assert_eq!(integer.value, expect.2);
-            assert_eq!(integer.token_literal(), expect.3);
+
+            if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+                if let Expressions::PrefixExpression(prefix) = expression.expression {
+                    assert_eq!(prefix.operator, expect.1);
+                    assert_eq!(prefix.right.token_literal(), expect.3);
+                    if let Expressions::IntegerLiteral(integer) = *prefix.right {
+                        assert_eq!(integer.value, expect.2);
+                    }
+                }
+            }
         }
     }
 
@@ -792,18 +759,17 @@ mod tests {
             let program = parser.parse_program();
             let statements = program.statements;
             let statements_count = statements.len();
-
             assert_eq!(statements_count, 1);
-            let statement = unsafe {
-                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
-            };
-            let prefix = unsafe {
-                mem::transmute::<&Box<Expression>, &Box<PrefixExpression>>(&statement.expression)
-            };
-            assert_eq!(prefix.operator, expect.1);
-            let integer =
-                unsafe { mem::transmute::<&Box<Expression>, &Box<Boolean>>(&prefix.right) };
-            assert_eq!(integer.value, expect.2);
+
+
+            if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+                if let Expressions::PrefixExpression(prefix) = expression.expression {
+                    assert_eq!(prefix.operator, expect.1);
+                    if let Expressions::Boolean(integer) = *prefix.right {
+                        assert_eq!(integer.value, expect.2);
+                    }
+                }
+            }
         }
     }
 
@@ -825,24 +791,19 @@ mod tests {
             let program = parser.parse_program();
             let statements = program.statements;
             let statements_count = statements.len();
-
             assert_eq!(statements_count, 1);
-            let statement = unsafe {
-                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
-            };
-            let expression = unsafe {
-                mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.expression)
-            };
 
-            let left = unsafe {
-                mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&expression.left)
-            };
-            assert_eq!(left.value, expect.1);
-            assert_eq!(expression.operator, expect.2);
-            let right = unsafe {
-                mem::transmute::<&Box<Expression>, &Box<IntegerLiteral>>(&expression.right)
-            };
-            assert_eq!(right.value, expect.3);
+            if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+                if let Expressions::InfixExpression(infix_expression) = expression.expression {
+                    if let Expressions::IntegerLiteral(left) = *infix_expression.left {
+                        assert_eq!(left.value, expect.1);
+                    }
+                    assert_eq!(infix_expression.operator, expect.2);
+                    if let Expressions::IntegerLiteral(right) = *infix_expression.right {
+                        assert_eq!(right.value, expect.3);
+                    }
+                }
+            }
         }
     }
 
@@ -859,22 +820,19 @@ mod tests {
             let program = parser.parse_program();
             let statements = program.statements;
             let statements_count = statements.len();
-
             assert_eq!(statements_count, 1);
-            let statement = unsafe {
-                mem::transmute::<&Box<Statement>, &Box<ExpressionStatement>>(&statements[0])
-            };
-            let expression = unsafe {
-                mem::transmute::<&Box<Expression>, &Box<InfixExpression>>(&statement.expression)
-            };
 
-            let left =
-                unsafe { mem::transmute::<&Box<Expression>, &Box<Boolean>>(&expression.left) };
-            assert_eq!(left.value, expect.1);
-            assert_eq!(expression.operator, expect.2);
-            let right =
-                unsafe { mem::transmute::<&Box<Expression>, &Box<Boolean>>(&expression.right) };
-            assert_eq!(right.value, expect.3);
+            if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+                if let Expressions::InfixExpression(infix_expression) = expression.expression {
+                    if let Expressions::Boolean(left) = *infix_expression.left {
+                        assert_eq!(left.value, expect.1);
+                    }
+                    assert_eq!(infix_expression.operator, expect.2);
+                    if let Expressions::Boolean(right) = *infix_expression.right {
+                        assert_eq!(right.value, expect.3);
+                    }
+                }
+            }
         }
     }
 
@@ -911,10 +869,9 @@ mod tests {
 
             let mut parser = Parser::new(l);
             let program = parser.parse_program();
-            let actual = program.string();
+            let actual = program.to_enum().string();
             assert_eq!(actual, expect.1);
         }
     }
-
 }
 

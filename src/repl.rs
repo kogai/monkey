@@ -30,7 +30,7 @@ pub fn run() {
             continue;
         }
 
-        let evaluated = eval(program.to_enum(), &mut env);
+        let evaluated = eval(program.to_enum().to_ast(), &mut env);
         println!("{:?}", evaluated.inspect());
         scan = "".to_string();
         print!("{}", prompt);

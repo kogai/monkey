@@ -1,4 +1,4 @@
-use ast::{Node, Nodes, Statement, IfExpression, BlockStatement, Identifier, Expression};
+use ast::{Node, Statements, AST, Expressions, IfExpression, BlockStatement, Identifier};
 use object::{Object, ObjectType, Null, Enviroment, Function};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
@@ -9,34 +9,34 @@ fn is_error(x: &Object) -> bool {
     x.object_type.to_type() == Object::new_error("".to_string()).object_type.to_type()
 }
 
-pub fn eval(node: Nodes, env: &mut Enviroment) -> Object {
-    use self::Nodes::*;
+pub fn eval(node: AST, env: &mut Enviroment) -> Object {
+    use self::AST::*;
     match node {
         Program(x) => eval_program(&x.statements, env),
         BlockStatement(x) => eval_block_statement(x, env),
         ReturnStatement(x) => {
-            let val = eval(x.return_value.to_enum(), env);
+            let val = eval(x.return_value.to_ast(), env);
             if is_error(&val) {
                 return val;
             }
             Object::new_return_value(val)
         }
         LetStatement(x) => {
-            let val = eval(x.value.to_enum(), env);
+            let val = eval(x.value.to_ast(), env);
             if is_error(&val) {
                 return val;
             }
             let result = env.set(x.name.value.clone(), val);
             result
         }
-        Identifier(x) => eval_identifier(x, env),
-        IfExpression(x) => eval_if_expression(x, env),
-        ExpressionStatement(x) => eval(x.expression.to_enum(), env),
+        Identifier(ref x) => eval_identifier(x, env),
+        IfExpression(ref x) => eval_if_expression(x, env),
+        ExpressionStatement(x) => eval(x.expression.to_ast(), env),
         IntegerLiteral(n) => Object::new_i32(n.value),
         Boolean(n) => native_bool_to_boolean_obj(n.value),
         PrefixExpression(x) => {
             let operator = x.operator.clone();
-            let right = eval(x.right.to_enum(), env);
+            let right = eval(x.right.to_ast(), env);
             if is_error(&right) {
                 return right;
             }
@@ -44,11 +44,11 @@ pub fn eval(node: Nodes, env: &mut Enviroment) -> Object {
         }
         InfixExpression(x) => {
             let operator = x.operator.clone();
-            let left = eval(x.left.to_enum(), env);
+            let left = eval(x.left.to_ast(), env);
             if is_error(&left) {
                 return left;
             }
-            let right = eval(x.right.to_enum(), env);
+            let right = eval(x.right.to_ast(), env);
             if is_error(&right) {
                 return right;
             }
@@ -56,7 +56,7 @@ pub fn eval(node: Nodes, env: &mut Enviroment) -> Object {
         }
         FunctionLiteral(x) => Object::new_function(x.parameters.clone(), x.body.clone(), env),
         CallExpression(x) => {
-            let func = eval(x.function.to_enum(), env);
+            let func = eval(x.function.to_ast(), env);
             if is_error(&func) {
                 return func;
             }
@@ -66,7 +66,6 @@ pub fn eval(node: Nodes, env: &mut Enviroment) -> Object {
                 Err(x) => x,
             }
         }
-        _ => NULL,
     }
 }
 
@@ -74,7 +73,7 @@ fn apply_function(func: Object, args: Vec<Object>) -> Object {
     match func.object_type {
         ObjectType::Function(f) => {
             let mut env = extend_function_env(&f, args);
-            let evaluated = eval(f.body.to_enum(), &mut env);
+            let evaluated = eval(f.body.to_enum().to_ast(), &mut env);
             unwrap_return_value(evaluated)
         }
         _ => Object::new_error(format!("not a function {:?}", func)),
@@ -98,12 +97,12 @@ fn unwrap_return_value(x: Object) -> Object {
     }
 }
 
-fn eval_expression(expressions: &Vec<Box<Expression>>,
+fn eval_expression(expressions: &Vec<Box<Expressions>>,
                    env: &mut Enviroment)
                    -> Result<Vec<Object>, Object> {
     let mut result: Vec<Object> = vec![];
     for expression in expressions.iter() {
-        let evaluated = eval(expression.to_enum(), env);
+        let evaluated = eval(expression.to_ast(), env);
         if is_error(&evaluated) {
             return Err(evaluated);
         }
@@ -112,10 +111,10 @@ fn eval_expression(expressions: &Vec<Box<Expression>>,
     Ok(result)
 }
 
-fn eval_program(statements: &Vec<Box<Statement>>, env: &mut Enviroment) -> Object {
+fn eval_program(statements: &Vec<Statements>, env: &mut Enviroment) -> Object {
     let mut result: Object = NULL;
     for statement in statements.iter() {
-        result = eval(statement.to_enum(), env);
+        result = eval(statement.to_ast(), env);
         if let ObjectType::Return(x) = result.object_type {
             return *x;
         }
@@ -133,10 +132,10 @@ fn eval_identifier(statement: &Identifier, env: &mut Enviroment) -> Object {
     }
 }
 
-fn eval_block_statement(x: &BlockStatement, env: &mut Enviroment) -> Object {
+fn eval_block_statement(x: BlockStatement, env: &mut Enviroment) -> Object {
     let mut result: Object = NULL;
     for statement in x.statements.iter() {
-        result = eval(statement.to_enum(), env);
+        result = eval(statement.to_ast(), env);
         if let ObjectType::Return(_) = result.object_type {
             return result;
         }
@@ -148,15 +147,15 @@ fn eval_block_statement(x: &BlockStatement, env: &mut Enviroment) -> Object {
 }
 
 fn eval_if_expression(x: &IfExpression, env: &mut Enviroment) -> Object {
-    let condition = eval(x.condition.to_enum(), env);
+    let condition = eval(x.condition.to_ast(), env);
     if is_error(&condition) {
         return condition;
     }
     match is_truthy(condition) {
-        true => eval(x.consequence.to_enum(), env),
+        true => eval(x.consequence.to_enum().to_ast(), env),
         false => {
             if let &Some(ref y) = &x.alternative {
-                return eval(y.to_enum(), env);
+                return eval(y.to_enum().to_ast(), env);
             };
             NULL
         }
@@ -255,7 +254,7 @@ mod tests {
         let mut parser = parser::Parser::new(l);
         let program = parser.parse_program();
         let mut env = Enviroment::new();
-        eval(program.to_enum(), &mut env)
+        eval(program.to_enum().to_ast(), &mut env)
     }
 
     #[test]

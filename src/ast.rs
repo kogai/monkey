@@ -3,6 +3,7 @@ use token::Token;
 pub trait Node {
     fn token_literal(&self) -> String;
     fn string(&self) -> String;
+    fn to_ast(&self) -> AST;
 }
 
 pub trait Statement: Node {
@@ -11,6 +12,23 @@ pub trait Statement: Node {
 
 pub trait Expression: Node {
     fn expression_node(&self) {}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AST {
+    Program(Program),
+    BlockStatement(BlockStatement),
+    LetStatement(LetStatement),
+    ReturnStatement(ReturnStatement),
+    ExpressionStatement(ExpressionStatement),
+    Identifier(Identifier),
+    IntegerLiteral(IntegerLiteral),
+    PrefixExpression(PrefixExpression),
+    InfixExpression(InfixExpression),
+    Boolean(Boolean),
+    IfExpression(IfExpression),
+    FunctionLiteral(FunctionLiteral),
+    CallExpression(CallExpression),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,6 +53,12 @@ impl Node for Nodes {
             &Nodes::Program(ref x) => fold_statements(&x.statements),
         }
     }
+
+    fn to_ast(&self) -> AST {
+        match self {
+            &Nodes::Program(ref x) => AST::Program(x.clone()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,6 +67,18 @@ pub enum Statements {
     LetStatement(LetStatement),
     ReturnStatement(ReturnStatement),
     ExpressionStatement(ExpressionStatement),
+}
+
+impl Statements {
+    pub fn new_let_statement(x: LetStatement) -> Self {
+        Statements::LetStatement(x)
+    }
+    pub fn new_return_statement(x: ReturnStatement) -> Self {
+        Statements::ReturnStatement(x)
+    }
+    pub fn new_expression_statement(x: ExpressionStatement) -> Self {
+        Statements::ExpressionStatement(x)
+    }
 }
 
 impl Node for Statements {
@@ -70,6 +106,15 @@ impl Node for Statements {
             &Statements::ExpressionStatement(ref x) => format!("{}", x.expression.string()),
         }
     }
+
+    fn to_ast(&self) -> AST {
+        match self {
+            &Statements::BlockStatement(ref x) => AST::BlockStatement(x.clone()),
+            &Statements::LetStatement(ref x) => AST::LetStatement(x.clone()),
+            &Statements::ReturnStatement(ref x) => AST::ReturnStatement(x.clone()),
+            &Statements::ExpressionStatement(ref x) => AST::ExpressionStatement(x.clone()),
+        }
+    }
 }
 
 impl Statement for Statements {}
@@ -84,6 +129,33 @@ pub enum Expressions {
     IfExpression(IfExpression),
     FunctionLiteral(FunctionLiteral),
     CallExpression(CallExpression),
+}
+
+impl Expressions {
+    pub fn new_identifier(x: Identifier) -> Self {
+        Expressions::Identifier(x)
+    }
+    pub fn new_integer_literal(x: IntegerLiteral) -> Self {
+        Expressions::IntegerLiteral(x)
+    }
+    pub fn new_prefix_expression(x: PrefixExpression) -> Self {
+        Expressions::PrefixExpression(x)
+    }
+    pub fn new_infix_expression(x: InfixExpression) -> Self {
+        Expressions::InfixExpression(x)
+    }
+    pub fn new_boolean(x: Boolean) -> Self {
+        Expressions::Boolean(x)
+    }
+    pub fn new_if_expression(x: IfExpression) -> Self {
+        Expressions::IfExpression(x)
+    }
+    pub fn new_function_literal(x: FunctionLiteral) -> Self {
+        Expressions::FunctionLiteral(x)
+    }
+    pub fn new_call_expression(x: CallExpression) -> Self {
+        Expressions::CallExpression(x)
+    }
 }
 
 impl Node for Expressions {
@@ -149,6 +221,19 @@ impl Node for Expressions {
             }
         }
     }
+
+    fn to_ast(&self) -> AST {
+        match self {
+            &Expressions::Identifier(ref x) => AST::Identifier(x.clone()),
+            &Expressions::IntegerLiteral(ref x) => AST::IntegerLiteral(x.clone()),
+            &Expressions::PrefixExpression(ref x) => AST::PrefixExpression(x.clone()),
+            &Expressions::InfixExpression(ref x) => AST::InfixExpression(x.clone()),
+            &Expressions::Boolean(ref x) => AST::Boolean(x.clone()),
+            &Expressions::IfExpression(ref x) => AST::IfExpression(x.clone()),
+            &Expressions::FunctionLiteral(ref x) => AST::FunctionLiteral(x.clone()),
+            &Expressions::CallExpression(ref x) => AST::CallExpression(x.clone()),
+        }
+    }
 }
 
 impl Expression for Expressions {}
@@ -158,6 +243,12 @@ pub struct Program {
     pub statements: Vec<Statements>,
 }
 
+impl Program {
+    pub fn to_enum(&self) -> Nodes {
+        Nodes::Program(self.clone())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BlockStatement {
     pub token: Token,
@@ -165,7 +256,7 @@ pub struct BlockStatement {
 }
 
 impl BlockStatement {
-    fn to_enum(&self) -> Statements {
+    pub fn to_enum(&self) -> Statements {
         Statements::BlockStatement(self.clone())
     }
 }
@@ -196,7 +287,7 @@ pub struct Identifier {
 }
 
 impl Identifier {
-    fn to_enum(&self) -> Expressions {
+    pub fn to_enum(&self) -> Expressions {
         Expressions::Identifier(self.clone())
     }
 }
@@ -244,7 +335,7 @@ pub struct FunctionLiteral {
 }
 
 impl FunctionLiteral {
-    fn to_enum(&self) -> Expressions {
+    pub fn to_enum(&self) -> Expressions {
         Expressions::FunctionLiteral(self.clone())
     }
 }

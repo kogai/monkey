@@ -11,7 +11,6 @@ impl Display for Null {
     }
 }
 
-/* Maybe unsafe... */
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Function {
     pub parameters: Vec<Identifier>,
