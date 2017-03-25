@@ -1,4 +1,4 @@
-use ast::{Node, Nodes, Statement, IfExpression, BlockStatement};
+use ast::{Node, Nodes, Statement, IfExpression, BlockStatement, Identifier};
 use object::{Object, ObjectType, Null, Enviroment};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
@@ -9,7 +9,7 @@ fn is_error(x: &Object) -> bool {
     x.object_type.to_type() == Object::new_error("".to_string()).object_type.to_type()
 }
 
-pub fn eval(node: Nodes, env: &Enviroment) -> Object {
+pub fn eval(node: Nodes, env: &mut Enviroment) -> Object {
     use self::Nodes::*;
     match node {
         Program(x) => eval_program(&x.statements, env),
@@ -26,8 +26,10 @@ pub fn eval(node: Nodes, env: &Enviroment) -> Object {
             if is_error(&val) {
                 return val;
             }
-            NULL
+            let result = env.set(x.name.value.clone(), val);
+            result
         }
+        Identifier(x) => eval_identifier(x, env),
         IfExpression(x) => eval_if_expression(x, env),
         ExpressionStatement(x) => eval(x.expression.to_enum(), env),
         IntegerLiteral(n) => Object::new_i32(n.value),
@@ -56,7 +58,7 @@ pub fn eval(node: Nodes, env: &Enviroment) -> Object {
     }
 }
 
-fn eval_program(statements: &Vec<Box<Statement>>, env: &Enviroment) -> Object {
+fn eval_program(statements: &Vec<Box<Statement>>, env: &mut Enviroment) -> Object {
     let mut result: Object = NULL;
     for statement in statements.iter() {
         result = eval(statement.to_enum(), env);
@@ -70,7 +72,14 @@ fn eval_program(statements: &Vec<Box<Statement>>, env: &Enviroment) -> Object {
     result
 }
 
-fn eval_block_statement(x: &BlockStatement, env: &Enviroment) -> Object {
+fn eval_identifier(statement: &Identifier, env: &mut Enviroment) -> Object {
+    match env.get(&statement.value) {
+        Some(x) => x.clone(),
+        None => Object::new_error(format!("identifier not found: {}", statement.value)),
+    }
+}
+
+fn eval_block_statement(x: &BlockStatement, env: &mut Enviroment) -> Object {
     let mut result: Object = NULL;
     for statement in x.statements.iter() {
         result = eval(statement.to_enum(), env);
@@ -84,7 +93,7 @@ fn eval_block_statement(x: &BlockStatement, env: &Enviroment) -> Object {
     result
 }
 
-fn eval_if_expression(x: &IfExpression, env: &Enviroment) -> Object {
+fn eval_if_expression(x: &IfExpression, env: &mut Enviroment) -> Object {
     let condition = eval(x.condition.to_enum(), env);
     if is_error(&condition) {
         return condition;
@@ -192,7 +201,7 @@ mod tests {
         let mut parser = parser::Parser::new(l);
         let program = parser.parse_program();
         let mut env = Enviroment::new();
-        eval(program.to_enum(), &env)
+        eval(program.to_enum(), &mut env)
     }
 
     #[test]

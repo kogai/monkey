@@ -95,8 +95,9 @@ impl Enviroment {
         self.store.get(key)
     }
 
-    pub fn set(&mut self, key: String, value: Object) -> Option<Object> {
-        self.store.insert(key, value)
+    pub fn set(&mut self, key: String, value: Object) -> Object {
+        self.store.insert(key, value.clone());
+        value
     }
 }
 
