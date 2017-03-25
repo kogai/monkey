@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 use std::collections::HashMap;
+use ast::{Identifier, BlockStatement};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Null;
@@ -10,6 +11,14 @@ impl Display for Null {
     }
 }
 
+/* Maybe unsafe... */
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Function {
+    parameters: Vec<Identifier>,
+    body: BlockStatement,
+    env: Enviroment,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObjectType {
     Integer(i32),
@@ -17,6 +26,7 @@ pub enum ObjectType {
     Null(Null),
     Return(Box<Object>),
     Error(String),
+    Function(Function),
 }
 
 impl ObjectType {
@@ -27,6 +37,7 @@ impl ObjectType {
             &ObjectType::Null(_) => 2,
             &ObjectType::Return(_) => 3,
             &ObjectType::Error(_) => 4,
+            &ObjectType::Function(_) => 5,
         }
     }
 }
@@ -44,6 +55,7 @@ impl Object {
             ObjectType::Null(ref x) => format!("{}", x),
             ObjectType::Return(ref x) => format!("{:?}", x),
             ObjectType::Error(ref x) => format!("Error: {}", x),
+            ObjectType::Function(ref x) => format!("Function: {:?}", x),
         }
     }
 
@@ -57,6 +69,16 @@ impl Object {
 
     pub fn new_error(x: String) -> Self {
         Object { object_type: ObjectType::Error(x) }
+    }
+
+    pub fn new_function(p: Vec<Identifier>, b: BlockStatement, e: &mut Enviroment) -> Self {
+        Object {
+            object_type: ObjectType::Function(Function {
+                                                  parameters: p,
+                                                  body: b,
+                                                  env: e.clone(),
+                                              }),
+        }
     }
 
     pub fn to_i32(&self) -> Option<i32> {
@@ -81,7 +103,7 @@ impl Object {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Enviroment {
     store: HashMap<String, Object>,
 }

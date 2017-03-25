@@ -16,6 +16,16 @@ impl Clone for Box<Node> {
     }
 }
 
+impl PartialEq for Box<Node> {
+    fn eq(&self, other: &Box<Node>) -> bool {
+        let left = self.to_enum().to_kind_i32();
+        let right = other.to_enum().to_kind_i32();
+        left == right
+    }
+}
+
+impl Eq for Box<Node> {}
+
 pub enum Nodes<'a> {
     Program(&'a Program),
     BlockStatement(&'a BlockStatement),
@@ -33,6 +43,27 @@ pub enum Nodes<'a> {
     CallExpression(&'a CallExpression),
 }
 
+impl<'a> Nodes<'a> {
+    fn to_kind_i32(&self) -> i32 {
+        match self {
+            &Nodes::Program(_) => 1,
+            &Nodes::BlockStatement(_) => 2,
+            &Nodes::LetStatement(_) => 3,
+            &Nodes::ReturnStatement(_) => 4,
+            &Nodes::IntegerLiteral(_) => 5,
+            &Nodes::Boolean(_) => 6,
+            &Nodes::Identifier(_) => 7,
+            &Nodes::EmptyExpression(_) => 8,
+            &Nodes::ExpressionStatement(_) => 9,
+            &Nodes::PrefixExpression(_) => 10,
+            &Nodes::InfixExpression(_) => 11,
+            &Nodes::IfExpression(_) => 12,
+            &Nodes::FunctionLiteral(_) => 13,
+            &Nodes::CallExpression(_) => 14,
+        }
+    }
+}
+
 pub trait Statement: Node {
     fn statement_node(&self);
 }
@@ -42,6 +73,16 @@ impl Clone for Box<Statement> {
         unsafe { mem::transmute::<Box<Node>, Box<Statement>>(self.box_clone()) }
     }
 }
+
+impl PartialEq for Box<Statement> {
+    fn eq(&self, other: &Box<Statement>) -> bool {
+        let left = self.to_enum().to_kind_i32();
+        let right = other.to_enum().to_kind_i32();
+        left == right
+    }
+}
+
+impl Eq for Box<Statement> {}
 
 pub trait Expression: Node {
     fn expression_node(&self);
@@ -76,6 +117,22 @@ impl Clone for Program {
     }
 }
 
+impl PartialEq for Program {
+    fn eq(&self, other: &Program) -> bool {
+        let statemnts = (*self.statements).into_iter();
+        let others = (*other.statements).into_iter();
+
+        if statemnts.len() != others.len() {
+            return false;
+        }
+
+        let mut ziped = statemnts.zip(others);
+        ziped.all(|x| x.0 == x.1)
+    }
+}
+
+impl Eq for Program {}
+
 impl Node for Program {
     fn token_literal(&self) -> String {
         match self.statements.first() {
@@ -99,6 +156,7 @@ impl Node for Program {
     }
 }
 
+#[derive(PartialEq, Eq, Clone)]
 pub struct BlockStatement {
     pub token: Token,
     pub statements: Vec<Box<Statement>>,
@@ -129,12 +187,6 @@ impl Node for BlockStatement {
 
     fn box_clone(&self) -> Box<Node> {
         Box::new((*self).clone())
-    }
-}
-
-impl Clone for BlockStatement {
-    fn clone(&self) -> Self {
-        unimplemented!();
     }
 }
 
@@ -212,7 +264,7 @@ impl Statement for ReturnStatement {
     fn statement_node(&self) {}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Identifier {
     pub token: Token,
     pub value: String,
@@ -242,6 +294,7 @@ impl Expression for Identifier {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EmptyExpression {}
+
 impl Node for EmptyExpression {
     fn token_literal(&self) -> String {
         "empty".to_string()

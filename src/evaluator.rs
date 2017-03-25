@@ -54,6 +54,7 @@ pub fn eval(node: Nodes, env: &mut Enviroment) -> Object {
             }
             eval_infix_expression(operator, left, right)
         }
+        FunctionLiteral(x) => Object::new_function(x.parameters.clone(), x.body.clone(), env),
         _ => NULL,
     }
 }
