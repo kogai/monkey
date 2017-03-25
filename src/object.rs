@@ -80,6 +80,7 @@ impl Object {
         }
     }
 
+    #[allow(dead_code)]
     pub fn to_i32(&self) -> Option<i32> {
         match self.object_type {
             ObjectType::Integer(ref x) => Some(x.clone()),
@@ -87,6 +88,7 @@ impl Object {
         }
     }
 
+    #[allow(dead_code)]
     pub fn to_bool(&self) -> Option<bool> {
         match self.object_type {
             ObjectType::Boolean(ref x) => Some(x.clone()),
@@ -94,6 +96,7 @@ impl Object {
         }
     }
 
+    #[allow(dead_code)]
     pub fn to_error_message(&self) -> Option<String> {
         match self.object_type {
             ObjectType::Error(ref x) => Some(x.clone()),
