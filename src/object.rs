@@ -125,7 +125,12 @@ impl Enviroment {
 
     pub fn get(&self, key: &String) -> Option<&Object> {
         match self.outer {
-            Some(ref o) => o.store.get(key),
+            Some(ref o) => {
+                match o.store.get(key) {
+                    Some(v) => Some(v),
+                    None => self.store.get(key),
+                }
+            }
             None => self.store.get(key),
         }
     }

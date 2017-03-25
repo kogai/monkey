@@ -390,13 +390,12 @@ mod tests {
 
     #[test]
     fn it_should_evaluate_function_literal() {
-        let expects = [("let identity = fn(x) {x;}; identity(5);", 5)];
-        // let expects = [("let identity = fn(x) {x;}; identity(5);", 5),
-        //                ("let identity = fn(x) {return x;}; identity(5);", 5),
-        //                ("let double = fn(x) {x * 2;}; double(5);", 10),
-        //                ("let add = fn(x, y) {x + y;}; add(5, 5);", 10),
-        //                ("let add = fn(x, y) {x + y;}; add(5 + 5, add(5, 5));", 20),
-        //                ("fn(x) {x;}(5)", 5)];
+        let expects = [("let identity = fn(x) {x;}; identity(5);", 5),
+                       ("let identity = fn(x) {return x;}; identity(5);", 5),
+                       ("let double = fn(x) {x * 2;}; double(5);", 10),
+                       ("let add = fn(x, y) {x + y;}; add(5, 5);", 10),
+                       ("let add = fn(x, y) {x + y;}; add(5 + 5, add(5, 5));", 20),
+                       ("fn(x) {x;}(5)", 5)];
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_i32().unwrap(), expect.1);
