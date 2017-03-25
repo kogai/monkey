@@ -1,3 +1,4 @@
+use std::mem;
 use std::clone::Clone;
 use std::fmt::{Debug, Formatter, Result};
 use token::Token;
@@ -6,6 +7,13 @@ pub trait Node {
     fn token_literal(&self) -> String;
     fn string(&self) -> String;
     fn to_enum(&self) -> Nodes;
+    fn box_clone(&self) -> Box<Node>;
+}
+
+impl Clone for Box<Node> {
+    fn clone(&self) -> Box<Node> {
+        self.box_clone()
+    }
 }
 
 pub enum Nodes<'a> {
@@ -29,8 +37,20 @@ pub trait Statement: Node {
     fn statement_node(&self);
 }
 
+impl Clone for Box<Statement> {
+    fn clone(&self) -> Box<Statement> {
+        unsafe { mem::transmute::<Box<Node>, Box<Statement>>(self.box_clone()) }
+    }
+}
+
 pub trait Expression: Node {
     fn expression_node(&self);
+}
+
+impl Clone for Box<Expression> {
+    fn clone(&self) -> Box<Expression> {
+        unsafe { mem::transmute::<Box<Node>, Box<Expression>>(self.box_clone()) }
+    }
 }
 
 pub struct Program {
@@ -43,6 +63,19 @@ impl Debug for Program {
     }
 }
 
+impl Clone for Program {
+    fn clone(&self) -> Self {
+        let statemnts = (*self.statements).into_iter();
+        let mut cloned: Vec<Box<Statement>> = vec![];
+
+        for statement in statemnts {
+            let stm = (*statement).clone();
+            cloned.push(stm);
+        }
+        Program { statements: cloned }
+    }
+}
+
 impl Node for Program {
     fn token_literal(&self) -> String {
         match self.statements.first() {
@@ -52,14 +85,17 @@ impl Node for Program {
     }
 
     fn string(&self) -> String {
-        let statemnts = &self.statements;
-
-        statemnts.into_iter()
+        (&self.statements)
+            .into_iter()
             .fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
     }
 
     fn to_enum(&self) -> Nodes {
         Nodes::Program(self)
+    }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
     }
 }
 
@@ -90,6 +126,16 @@ impl Node for BlockStatement {
     fn to_enum(&self) -> Nodes {
         Nodes::BlockStatement(self)
     }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
+    }
+}
+
+impl Clone for BlockStatement {
+    fn clone(&self) -> Self {
+        unimplemented!();
+    }
 }
 
 impl Statement for BlockStatement {
@@ -117,6 +163,16 @@ impl Node for LetStatement {
     fn to_enum(&self) -> Nodes {
         Nodes::LetStatement(self)
     }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
+    }
+}
+
+impl Clone for LetStatement {
+    fn clone(&self) -> Self {
+        unimplemented!();
+    }
 }
 
 impl Statement for LetStatement {
@@ -140,13 +196,23 @@ impl Node for ReturnStatement {
     fn to_enum(&self) -> Nodes {
         Nodes::ReturnStatement(self)
     }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
+    }
+}
+
+impl Clone for ReturnStatement {
+    fn clone(&self) -> Self {
+        unimplemented!();
+    }
 }
 
 impl Statement for ReturnStatement {
     fn statement_node(&self) {}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Identifier {
     pub token: Token,
     pub value: String,
@@ -164,13 +230,17 @@ impl Node for Identifier {
     fn to_enum(&self) -> Nodes {
         Nodes::Identifier(self)
     }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
+    }
 }
 
 impl Expression for Identifier {
     fn expression_node(&self) {}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EmptyExpression {}
 impl Node for EmptyExpression {
     fn token_literal(&self) -> String {
@@ -183,6 +253,10 @@ impl Node for EmptyExpression {
 
     fn to_enum(&self) -> Nodes {
         Nodes::EmptyExpression(self)
+    }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
     }
 }
 
@@ -207,13 +281,23 @@ impl Node for ExpressionStatement {
     fn to_enum(&self) -> Nodes {
         Nodes::ExpressionStatement(self)
     }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
+    }
+}
+
+impl Clone for ExpressionStatement {
+    fn clone(&self) -> Self {
+        unimplemented!();
+    }
 }
 
 impl Statement for ExpressionStatement {
     fn statement_node(&self) {}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IntegerLiteral {
     pub token: Token,
     pub value: i32,
@@ -230,6 +314,10 @@ impl Node for IntegerLiteral {
 
     fn to_enum(&self) -> Nodes {
         Nodes::IntegerLiteral(self)
+    }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
     }
 }
 
@@ -254,6 +342,16 @@ impl Node for PrefixExpression {
 
     fn to_enum(&self) -> Nodes {
         Nodes::PrefixExpression(self)
+    }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
+    }
+}
+
+impl Clone for PrefixExpression {
+    fn clone(&self) -> Self {
+        unimplemented!();
     }
 }
 
@@ -283,13 +381,23 @@ impl Node for InfixExpression {
     fn to_enum(&self) -> Nodes {
         Nodes::InfixExpression(self)
     }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
+    }
+}
+
+impl Clone for InfixExpression {
+    fn clone(&self) -> Self {
+        unimplemented!();
+    }
 }
 
 impl Expression for InfixExpression {
     fn expression_node(&self) {}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Boolean {
     pub token: Token,
     pub value: bool,
@@ -306,6 +414,10 @@ impl Node for Boolean {
 
     fn to_enum(&self) -> Nodes {
         Nodes::Boolean(self)
+    }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
     }
 }
 
@@ -344,12 +456,23 @@ impl Node for IfExpression {
     fn to_enum(&self) -> Nodes {
         Nodes::IfExpression(self)
     }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
+    }
+}
+
+impl Clone for IfExpression {
+    fn clone(&self) -> Self {
+        unimplemented!();
+    }
 }
 
 impl Expression for IfExpression {
     fn expression_node(&self) {}
 }
 
+#[derive(Debug, Clone)]
 pub struct FunctionLiteral {
     pub token: Token,
     pub parameters: Vec<Identifier>,
@@ -373,6 +496,10 @@ impl Node for FunctionLiteral {
 
     fn to_enum(&self) -> Nodes {
         Nodes::FunctionLiteral(self)
+    }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
     }
 }
 
@@ -404,6 +531,16 @@ impl Node for CallExpression {
 
     fn to_enum(&self) -> Nodes {
         Nodes::CallExpression(self)
+    }
+
+    fn box_clone(&self) -> Box<Node> {
+        Box::new((*self).clone())
+    }
+}
+
+impl Clone for CallExpression {
+    fn clone(&self) -> Self {
+        unimplemented!();
     }
 }
 

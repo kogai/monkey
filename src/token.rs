@@ -1,6 +1,6 @@
 use lexer::{is_digit, is_letter};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {
     ILLEGAL,
     EOF,
@@ -99,7 +99,7 @@ impl TokenType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
     pub token_type: TokenType,
     pub literal: String,
