@@ -14,9 +14,9 @@ impl Display for Null {
 /* Maybe unsafe... */
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Function {
-    parameters: Vec<Identifier>,
-    body: BlockStatement,
-    env: Enviroment,
+    pub parameters: Vec<Identifier>,
+    pub body: BlockStatement,
+    pub env: Enviroment,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -106,15 +106,29 @@ impl Object {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Enviroment {
     store: HashMap<String, Object>,
+    outer: Option<Box<Enviroment>>,
 }
 
 impl Enviroment {
     pub fn new() -> Self {
-        Enviroment { store: HashMap::new() }
+        Enviroment {
+            store: HashMap::new(),
+            outer: None,
+        }
+    }
+
+    pub fn new_enclosed_enviroment(outer: Self) -> Self {
+        Enviroment {
+            store: HashMap::new(),
+            outer: Some(Box::new(outer)),
+        }
     }
 
     pub fn get(&self, key: &String) -> Option<&Object> {
-        self.store.get(key)
+        match self.outer {
+            Some(ref o) => o.store.get(key),
+            None => self.store.get(key),
+        }
     }
 
     pub fn set(&mut self, key: String, value: Object) -> Object {

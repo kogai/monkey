@@ -317,6 +317,7 @@ impl Expression for EmptyExpression {
     fn expression_node(&self) {}
 }
 
+#[derive(Clone)]
 pub struct ExpressionStatement {
     pub token: Token,
     pub expression: Box<Expression>,
@@ -337,12 +338,6 @@ impl Node for ExpressionStatement {
 
     fn box_clone(&self) -> Box<Node> {
         Box::new((*self).clone())
-    }
-}
-
-impl Clone for ExpressionStatement {
-    fn clone(&self) -> Self {
-        unimplemented!();
     }
 }
 
