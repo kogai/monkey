@@ -6,6 +6,7 @@ pub enum TokenType {
     EOF,
     IDENT(String),
     INT(String),
+    STRING(String),
     ASSIGN,
     PLUS,
     MINUS,
@@ -32,8 +33,8 @@ pub enum TokenType {
 }
 
 impl TokenType {
-    pub fn from_str<'a>(s: &'a str) -> TokenType {
-        match s {
+    pub fn from_string(s: &String) -> TokenType {
+        match s.as_str() {
             "+" => TokenType::PLUS,
             "-" => TokenType::MINUS,
             "*" => TokenType::MULTIPLY,
@@ -58,44 +59,10 @@ impl TokenType {
             "!" => TokenType::BANG,
             "==" => TokenType::EQ,
             "!=" => TokenType::NOTEQ,
-            n if is_digit(&n.to_string()) => TokenType::INT(n.to_string()),
-            id if is_letter(&id.to_string()) => TokenType::IDENT(id.to_string()),
+            _ if is_digit(s) => TokenType::INT(s.clone()),
+            _ if is_letter(s) => TokenType::IDENT(s.clone()),
             _ => TokenType::ILLEGAL,
         }
-    }
-
-    // このメソッドは要らない気がする
-    pub fn to_str<'a>(&'a self) -> String {
-        (match *self {
-                 TokenType::EOF => "",
-                 TokenType::ASSIGN => "=",
-                 TokenType::PLUS => "+",
-                 TokenType::MINUS => "-",
-                 TokenType::MULTIPLY => "*",
-                 TokenType::DIVIDE => "/",
-                 TokenType::BANG => "!",
-                 TokenType::LT => "<",
-                 TokenType::GT => ">",
-                 TokenType::COMMA => ",",
-                 TokenType::SEMICOLON => ";",
-                 TokenType::LPAREN => "(",
-                 TokenType::RPAREN => ")",
-                 TokenType::LBRACE => "{",
-                 TokenType::RBRACE => "}",
-                 TokenType::FUNCTION => "fn",
-                 TokenType::LET => "let",
-                 TokenType::TRUE => "true",
-                 TokenType::FALSE => "false",
-                 TokenType::IF => "if",
-                 TokenType::ELSE => "else",
-                 TokenType::RETURN => "return",
-                 TokenType::EQ => "==",
-                 TokenType::NOTEQ => "!=",
-                 TokenType::INT(ref x) => x,
-                 TokenType::IDENT(ref x) => x,
-                 _ => "ILLEGAL",
-             })
-            .to_string()
     }
 }
 
@@ -106,12 +73,20 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(s: String) -> Self {
-        let tt = TokenType::from_str(s.as_str());
-
+    pub fn new(s: String, is_string: bool) -> Self {
+        if is_string {
+            return Token::new_string(s);
+        }
         Token {
-            token_type: tt.clone(),
-            literal: tt.to_str(),
+            token_type: TokenType::from_string(&s),
+            literal: s,
+        }
+    }
+
+    fn new_string(s: String) -> Self {
+        Token {
+            token_type: TokenType::STRING(s.clone()),
+            literal: s,
         }
     }
 }

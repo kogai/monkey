@@ -42,6 +42,7 @@ impl Lexer {
     pub fn next_token(&mut self) -> token::Token {
         self.skip_white_space();
         let current_char = &self.current_char.clone();
+        let mut is_string = false;
         let seed = match current_char {
             x if is_letter(x) => self.read_identifier(),
             x if is_digit(x) => self.read_digit(),
@@ -55,15 +56,37 @@ impl Lexer {
                 self.read_char();
                 format!("{}{}", x, "=")
             },
+            x if x == "\"" => {
+                is_string = true;
+                self.read_string()
+            },
             x => {
                 self.read_char();
                 x.clone()
             },
         };
-        token::Token::new(seed)
+
+        token::Token::new(seed, is_string)
     }
 
-    pub fn read_identifier(&mut self) -> String {
+    fn read_string(&mut self) -> String {
+        self.read_char();
+        let start = (self.position - 1) as usize;
+
+        while self.current_char != "\"" {
+            self.read_char();
+        }
+
+        let input_chars = self.input.chars().collect::<Vec<char>>();
+        let end = (self.position - 1) as usize;
+        self.read_char();
+
+        (&input_chars[start..end])
+            .iter()
+            .fold("".to_string(), |acc, &s| { format!("{}{}", acc, s.to_string()) })
+    }
+
+    fn read_identifier(&mut self) -> String {
         let start = (self.position - 1) as usize;
 
         while is_letter(&self.current_char) {
@@ -76,7 +99,7 @@ impl Lexer {
         (*splited).to_string()
     }
 
-    pub fn read_digit(&mut self) -> String {
+    fn read_digit(&mut self) -> String {
         let start = (self.position - 1) as usize;
 
         while is_digit(&self.current_char) {
@@ -237,6 +260,8 @@ mod tests {
             };
 
             let result = add(five, ten);
+            \"foobar\";
+            \"foo bar\";
         ".to_string());
         let expects = [
             (token::TokenType::LET, "let"),
@@ -277,6 +302,11 @@ mod tests {
             (token::TokenType::COMMA, ","),
             (token::TokenType::IDENT("ten".to_string()), "ten"),
             (token::TokenType::RPAREN, ")"),
+            (token::TokenType::SEMICOLON, ";"),
+
+            (token::TokenType::STRING("foobar".to_string()), "foobar"),
+            (token::TokenType::SEMICOLON, ";"),
+            (token::TokenType::STRING("foo bar".to_string()), "foo bar"),
             (token::TokenType::SEMICOLON, ";"),
 
             (token::TokenType::EOF, "")
