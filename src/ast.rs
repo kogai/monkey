@@ -24,6 +24,7 @@ pub enum AST {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
     StringLiteral(StringLiteral),
+    ArrayLiteral(ArrayLiteral),
     PrefixExpression(PrefixExpression),
     InfixExpression(InfixExpression),
     Boolean(Boolean),
@@ -125,6 +126,7 @@ pub enum Expressions {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
     StringLiteral(StringLiteral),
+    ArrayLiteral(ArrayLiteral),
     PrefixExpression(PrefixExpression),
     InfixExpression(InfixExpression),
     Boolean(Boolean),
@@ -142,6 +144,9 @@ impl Expressions {
     }
     pub fn new_string_literal(x: StringLiteral) -> Self {
         Expressions::StringLiteral(x)
+    }
+    pub fn new_array_literal(x: ArrayLiteral) -> Expressions {
+        Expressions::ArrayLiteral(x)
     }
     pub fn new_prefix_expression(x: PrefixExpression) -> Self {
         Expressions::PrefixExpression(x)
@@ -169,6 +174,7 @@ impl Node for Expressions {
             &Expressions::Identifier(ref x) => x.token.literal.clone(),
             &Expressions::IntegerLiteral(ref x) => x.token.literal.clone(),
             &Expressions::StringLiteral(ref x) => x.token.literal.clone(),
+            &Expressions::ArrayLiteral(ref x) => x.token.literal.clone(),
             &Expressions::PrefixExpression(ref x) => x.token.literal.clone(),
             &Expressions::InfixExpression(ref x) => x.token.literal.clone(),
             &Expressions::Boolean(ref x) => x.token.literal.clone(),
@@ -183,6 +189,7 @@ impl Node for Expressions {
             &Expressions::Identifier(ref x) => x.value.clone(),
             &Expressions::IntegerLiteral(ref x) => format!("{}", x.value),
             &Expressions::StringLiteral(ref x) => x.value.clone(),
+            &Expressions::ArrayLiteral(ref x) => format!("{:?}", x.elements),
             &Expressions::PrefixExpression(ref x) => {
                 format!("({}{})", x.operator, x.right.string())
             }
@@ -234,6 +241,7 @@ impl Node for Expressions {
             &Expressions::Identifier(ref x) => AST::Identifier(x.clone()),
             &Expressions::IntegerLiteral(ref x) => AST::IntegerLiteral(x.clone()),
             &Expressions::StringLiteral(ref x) => AST::StringLiteral(x.clone()),
+            &Expressions::ArrayLiteral(ref x) => AST::ArrayLiteral(x.clone()),
             &Expressions::PrefixExpression(ref x) => AST::PrefixExpression(x.clone()),
             &Expressions::InfixExpression(ref x) => AST::InfixExpression(x.clone()),
             &Expressions::Boolean(ref x) => AST::Boolean(x.clone()),
@@ -310,6 +318,12 @@ pub struct IntegerLiteral {
 pub struct StringLiteral {
     pub token: Token,
     pub value: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArrayLiteral {
+    pub token: Token,
+    pub elements: Vec<Box<Expressions>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

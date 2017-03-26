@@ -34,6 +34,7 @@ pub fn eval(node: AST, env: &mut Enviroment) -> Object {
         ExpressionStatement(x) => eval(x.expression.to_ast(), env),
         IntegerLiteral(n) => Object::new_i32(n.value),
         StringLiteral(n) => Object::new_string(n.value),
+        ArrayLiteral(n) => NULL,
         Boolean(n) => native_bool_to_boolean_obj(n.value),
         PrefixExpression(x) => {
             let operator = x.operator.clone();

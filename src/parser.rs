@@ -4,7 +4,7 @@ use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, LetStatement, ReturnStatement, ExpressionStatement, Identifier, PrefixExpression,
           InfixExpression, IntegerLiteral, Boolean, IfExpression, BlockStatement, FunctionLiteral,
-          CallExpression, Statements, Expressions, StringLiteral};
+          CallExpression, Statements, Expressions, StringLiteral, ArrayLiteral};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -145,10 +145,20 @@ impl Parser {
             TRUE => Some(self.parse_boolean()),
             FALSE => Some(self.parse_boolean()),
             LPAREN => self.parse_group_expression(),
+            LBRACKET => Some(self.parse_array_literal()),
             IF => Some(self.parse_if_expression()),
             FUNCTION => Some(self.parse_function_literal()),
             _ => None,
         }
+    }
+
+    fn parse_array_literal(&mut self) -> Expressions {
+        let token = self.current_token.clone();
+        let elements = self.parse_expression_list(TokenType::RBRACKET);
+        Expressions::new_array_literal(ArrayLiteral {
+                                           token: token,
+                                           elements: elements,
+                                       })
     }
 
     fn parse_function_literal(&mut self) -> Expressions {
@@ -240,19 +250,19 @@ impl Parser {
         }
     }
 
-    fn parse_call_expression(&mut self, left: Expressions) -> Expressions {
+    fn parse_call_expression(&mut self, function: Expressions) -> Expressions {
         let token = self.current_token.clone();
-        let arguments = self.parse_call_arguments();
+        let arguments = self.parse_expression_list(TokenType::RPAREN);
         Expressions::new_call_expression(CallExpression {
                                              token: token,
-                                             function: Box::new(left),
+                                             function: Box::new(function),
                                              arguments: arguments,
                                          })
     }
 
-    fn parse_call_arguments(&mut self) -> Vec<Box<Expressions>> {
+    fn parse_expression_list(&mut self, end: TokenType) -> Vec<Box<Expressions>> {
         let mut arguments: Vec<Box<Expressions>> = vec![];
-        if self.peek_token_is(TokenType::RPAREN) {
+        if self.peek_token_is(end.clone()) {
             self.next_token();
             return arguments;
         }
@@ -265,7 +275,7 @@ impl Parser {
             arguments.push(Box::new(self.parse_expression(Precedence::LOWEST)));
         }
 
-        self.expect_peek_token(TokenType::RPAREN);
+        self.expect_peek_token(end.clone());
         arguments
     }
 
@@ -727,6 +737,25 @@ mod tests {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn it_should_parse_array_literal() {
+        let l = lexer::Lexer::new("[1, 2 * 2, 3 + 3];".to_string());
+
+        let mut parser = Parser::new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+        assert_eq!(statements_count, 1);
+        if let Statements::ExpressionStatement(x) = (&statements[0]).clone() {
+            if let Expressions::ArrayLiteral(y) = x.expression {
+                assert_eq!(y.elements.len(), 3);
+                assert_eq!(&y.elements[0].string(), "1");
+                assert_eq!(&y.elements[1].string(), "(2 * 2)");
+                assert_eq!(&y.elements[2].string(), "(3 + 3)");
             }
         }
     }
