@@ -1,5 +1,5 @@
 use ast::{Node, Statements, AST, Expressions, IfExpression, BlockStatement, Identifier};
-use object::{Object, ObjectType, Null, Enviroment, Function};
+use object::{Object, ObjectType, Null, Enviroment, Function, BuildIn, BuildInFunction};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
 const FALSE: Object = Object { object_type: ObjectType::Boolean(false) };
@@ -77,6 +77,11 @@ fn apply_function(func: Object, args: Vec<Object>) -> Object {
             let evaluated = eval(f.body.to_enum().to_ast(), &mut env);
             unwrap_return_value(evaluated)
         }
+        ObjectType::BuildIn(b) => {
+            match b {
+                BuildIn::Len(l) => l.call(args),
+            }
+        }
         _ => Object::new_error(format!("not a function {:?}", func)),
     }
 }
@@ -129,7 +134,12 @@ fn eval_program(statements: &Vec<Statements>, env: &mut Enviroment) -> Object {
 fn eval_identifier(statement: &Identifier, env: &mut Enviroment) -> Object {
     match env.get(&statement.value) {
         Some(x) => x.clone(),
-        None => Object::new_error(format!("identifier not found: {}", statement.value)),
+        None => {
+            match BuildIn::set_from_string(&statement.value) {
+                Some(y) => y,
+                _ => Object::new_error(format!("identifier not found: {}", statement.value)),
+            }
+        }
     }
 }
 
@@ -432,6 +442,22 @@ mod tests {
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_i32().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_call_build_in_functions() {
+        let expects = [("len(\"\");", 0), ("len(\"four\");", 4), ("len(\"hello world\");", 11)];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_i32().unwrap(), expect.1);
+        }
+
+        let error_expects = [("len(1);", "argument to \"len\" not supported. got Integer(1)"),
+                             ("len(\"one\", \"two\");", "wrong number of arguments. got 2 want=1")];
+        for expect in error_expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_error_message().unwrap(), expect.1);
         }
     }
 }
