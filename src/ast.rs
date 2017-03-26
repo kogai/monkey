@@ -27,6 +27,7 @@ pub enum AST {
     ArrayLiteral(ArrayLiteral),
     PrefixExpression(PrefixExpression),
     InfixExpression(InfixExpression),
+    IndexExpression(IndexExpression),
     Boolean(Boolean),
     IfExpression(IfExpression),
     FunctionLiteral(FunctionLiteral),
@@ -129,6 +130,7 @@ pub enum Expressions {
     ArrayLiteral(ArrayLiteral),
     PrefixExpression(PrefixExpression),
     InfixExpression(InfixExpression),
+    IndexExpression(IndexExpression),
     Boolean(Boolean),
     IfExpression(IfExpression),
     FunctionLiteral(FunctionLiteral),
@@ -181,6 +183,7 @@ impl Node for Expressions {
             &Expressions::IfExpression(ref x) => x.token.literal.clone(),
             &Expressions::FunctionLiteral(ref x) => x.token.literal.clone(),
             &Expressions::CallExpression(ref x) => x.token.literal.clone(),
+            &Expressions::IndexExpression(ref x) => x.token.literal.clone(),
         }
     }
 
@@ -189,7 +192,14 @@ impl Node for Expressions {
             &Expressions::Identifier(ref x) => x.value.clone(),
             &Expressions::IntegerLiteral(ref x) => format!("{}", x.value),
             &Expressions::StringLiteral(ref x) => x.value.clone(),
-            &Expressions::ArrayLiteral(ref x) => format!("{:?}", x.elements),
+            &Expressions::ArrayLiteral(ref x) => {
+                let elements = (&x.elements)
+                    .into_iter()
+                    .map(|p| p.string())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!("[{}]", elements)
+            }
             &Expressions::PrefixExpression(ref x) => {
                 format!("({}{})", x.operator, x.right.string())
             }
@@ -224,7 +234,6 @@ impl Node for Expressions {
                         parameters_string,
                         x.body.to_enum().string())
             }
-
             &Expressions::CallExpression(ref x) => {
                 let arguments_string = (&x.arguments)
                     .into_iter()
@@ -232,6 +241,9 @@ impl Node for Expressions {
                     .collect::<Vec<String>>()
                     .join(", ");
                 format!("{}({})", x.function.string(), arguments_string)
+            }
+            &Expressions::IndexExpression(ref x) => {
+                format!("({}[{}])", x.left.string(), x.index.string())
             }
         }
     }
@@ -248,6 +260,7 @@ impl Node for Expressions {
             &Expressions::IfExpression(ref x) => AST::IfExpression(x.clone()),
             &Expressions::FunctionLiteral(ref x) => AST::FunctionLiteral(x.clone()),
             &Expressions::CallExpression(ref x) => AST::CallExpression(x.clone()),
+            &Expressions::IndexExpression(ref x) => AST::IndexExpression(x.clone()),
         }
     }
 }
@@ -339,6 +352,13 @@ pub struct InfixExpression {
     pub operator: String,
     pub left: Box<Expressions>,
     pub right: Box<Expressions>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexExpression {
+    pub token: Token,
+    pub left: Box<Expressions>,
+    pub index: Box<Expressions>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

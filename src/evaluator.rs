@@ -68,6 +68,7 @@ pub fn eval(node: AST, env: &mut Enviroment) -> Object {
                 Err(x) => x,
             }
         }
+        IndexExpression(z) => NULL,
     }
 }
 

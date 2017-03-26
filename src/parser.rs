@@ -4,7 +4,7 @@ use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, LetStatement, ReturnStatement, ExpressionStatement, Identifier, PrefixExpression,
           InfixExpression, IntegerLiteral, Boolean, IfExpression, BlockStatement, FunctionLiteral,
-          CallExpression, Statements, Expressions, StringLiteral, ArrayLiteral};
+          CallExpression, Statements, Expressions, StringLiteral, ArrayLiteral, IndexExpression};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -15,6 +15,7 @@ enum Precedence {
     PRODUCT,
     PREFIX,
     CALL,
+    INDEX,
 }
 
 fn precendences(token: TokenType) -> Precedence {
@@ -31,6 +32,7 @@ fn precendences(token: TokenType) -> Precedence {
         DIVIDE => PRODUCT,
         MULTIPLY => PRODUCT,
         LPAREN => CALL,
+        LBRACKET => INDEX,
         _ => LOWEST,
     }
 }
@@ -291,8 +293,21 @@ impl Parser {
             LT => self.parse_infix_expression(left),
             GT => self.parse_infix_expression(left),
             LPAREN => self.parse_call_expression(left),
+            LBRACKET => self.parse_index_expression(left),
             _ => left,
         }
+    }
+
+    fn parse_index_expression(&mut self, left: Expressions) -> Expressions {
+        let token = self.current_token.clone();
+        self.next_token();
+        let index = self.parse_expression(Precedence::LOWEST);
+        self.expect_peek_token(TokenType::RBRACKET);
+        Expressions::IndexExpression(IndexExpression {
+                                         token: token,
+                                         index: Box::new(index),
+                                         left: Box::new(left),
+                                     })
     }
 
     fn parse_prefix_expression(&mut self) -> Expressions {
@@ -761,6 +776,27 @@ mod tests {
     }
 
     #[test]
+    fn it_should_parse_index_expression() {
+        let l = lexer::Lexer::new("myArray[1 + 2];".to_string());
+
+        let mut parser = Parser::new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+        assert_eq!(statements_count, 1);
+        if let Statements::ExpressionStatement(x) = (&statements[0]).clone() {
+            if let Expressions::IndexExpression(y) = x.expression {
+                assert_eq!(y.left.string(), "myArray");
+                if let Expressions::InfixExpression(z) = *y.index {
+                    assert_eq!(z.left.string(), "1");
+                    assert_eq!(z.operator, "+");
+                    assert_eq!(z.right.string(), "2");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn it_should_parse_call_expression() {
         let l = lexer::Lexer::new("add(1, 2 * 3, 4 + 5);".to_string());
         let mut parser = Parser::new(l);
@@ -920,7 +956,10 @@ mod tests {
                        ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
                        ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
                         "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
-                       ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")];
+                       ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"),
+                       ("a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"),
+                       ("add(a * b[2], b[1], 2 * [1, 2][1])",
+                        "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))")];
 
         for expect in expects.iter() {
             let l = lexer::Lexer::new(expect.0.to_string());
@@ -928,6 +967,7 @@ mod tests {
             let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let actual = program.to_enum().string();
+            println!("{:?}", actual);
             assert_eq!(actual, expect.1);
         }
     }
