@@ -33,6 +33,7 @@ pub fn eval(node: AST, env: &mut Enviroment) -> Object {
         IfExpression(ref x) => eval_if_expression(x, env),
         ExpressionStatement(x) => eval(x.expression.to_ast(), env),
         IntegerLiteral(n) => Object::new_i32(n.value),
+        StringLiteral(n) => Object::new_string(n.value),
         Boolean(n) => native_bool_to_boolean_obj(n.value),
         PrefixExpression(x) => {
             let operator = x.operator.clone();
@@ -185,6 +186,12 @@ fn eval_infix_expression(operator: String, left: Object, right: Object) -> Objec
         }
     }
 
+    if let ObjectType::StringType(l) = left.object_type.clone() {
+        if let ObjectType::StringType(r) = right.object_type.clone() {
+            return eval_string_infix_expression(operator, l, r);
+        }
+    }
+
     if left.object_type.to_type() != right.object_type.to_type() {
         return Object::new_error(format!("type mismatch: {:?} {} {:?}",
                                          left.object_type,
@@ -215,6 +222,13 @@ fn eval_integer_infix_expression(operator: String, left: i32, right: i32) -> Obj
         "==" => native_bool_to_boolean_obj(left == right),
         "!=" => native_bool_to_boolean_obj(left != right),
         _ => Object::new_error(format!("unknown operator: Integer {} Integer", operator)),
+    }
+}
+
+fn eval_string_infix_expression(operator: String, left: String, right: String) -> Object {
+    match operator.as_str() {
+        "+" => Object::new_string(format!("{}{}", left, right)),
+        _ => Object::new_error(format!("unknown operator: String {} String", operator)),
     }
 }
 
@@ -277,6 +291,24 @@ mod tests {
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_i32().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_string_expression() {
+        let expects = [("\"hello world\"", "hello world")];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_string().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_concatenation_string() {
+        let expects = [("\"hello\" + \" \" + \"world\"", "hello world")];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_string().unwrap(), expect.1);
         }
     }
 
@@ -369,7 +401,8 @@ mod tests {
                         };
                        ",
                         "unknown operator: Boolean(true) + Boolean(false)"),
-                       ("foobar", "identifier not found: foobar")];
+                       ("foobar", "identifier not found: foobar"),
+                       ("\"hello world\" - \"world\"", "unknown operator: String - String")];
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_error_message().unwrap(), expect.1);

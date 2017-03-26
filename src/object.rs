@@ -21,6 +21,7 @@ pub struct Function {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObjectType {
     Integer(i32),
+    StringType(String),
     Boolean(bool),
     Null(Null),
     Return(Box<Object>),
@@ -37,6 +38,7 @@ impl ObjectType {
             &ObjectType::Return(_) => 3,
             &ObjectType::Error(_) => 4,
             &ObjectType::Function(_) => 5,
+            &ObjectType::StringType(_) => 6,
         }
     }
 }
@@ -50,6 +52,7 @@ impl Object {
     pub fn inspect(&self) -> String {
         match self.object_type {
             ObjectType::Integer(ref x) => format!("{}", x),
+            ObjectType::StringType(ref x) => x.clone(),
             ObjectType::Boolean(ref x) => format!("{}", x),
             ObjectType::Null(ref x) => format!("{}", x),
             ObjectType::Return(ref x) => format!("{:?}", x),
@@ -60,6 +63,10 @@ impl Object {
 
     pub fn new_i32(x: i32) -> Self {
         Object { object_type: ObjectType::Integer(x) }
+    }
+
+    pub fn new_string(x: String) -> Self {
+        Object { object_type: ObjectType::StringType(x) }
     }
 
     pub fn new_return_value(x: Self) -> Self {
@@ -84,6 +91,14 @@ impl Object {
     pub fn to_i32(&self) -> Option<i32> {
         match self.object_type {
             ObjectType::Integer(ref x) => Some(x.clone()),
+            _ => None,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn to_string(&self) -> Option<String> {
+        match self.object_type {
+            ObjectType::StringType(ref x) => Some(x.clone()),
             _ => None,
         }
     }
