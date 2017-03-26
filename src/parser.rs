@@ -4,7 +4,7 @@ use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, LetStatement, ReturnStatement, ExpressionStatement, Identifier, PrefixExpression,
           InfixExpression, IntegerLiteral, Boolean, IfExpression, BlockStatement, FunctionLiteral,
-          CallExpression, Statements, Expressions};
+          CallExpression, Statements, Expressions, StringLiteral};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -139,6 +139,7 @@ impl Parser {
         match t {
             IDENT(_) => Some(self.parse_identifier()),
             INT(_) => self.parse_integer_literal(),
+            STRING(_) => Some(self.parse_string_literal()),
             BANG => Some(self.parse_prefix_expression()),
             MINUS => Some(self.parse_prefix_expression()),
             TRUE => Some(self.parse_boolean()),
@@ -336,6 +337,13 @@ impl Parser {
                 None
             }
         }
+    }
+
+    fn parse_string_literal(&mut self) -> Expressions {
+        Expressions::new_string_literal(StringLiteral {
+                                            token: self.current_token.clone(),
+                                            value: self.current_token.literal.clone(),
+                                        })
     }
 
     fn parse_return_statement(&mut self) -> ReturnStatement {
@@ -569,6 +577,27 @@ mod tests {
             assert_eq!(identifier.token_literal(), "5");
             if let Expressions::IntegerLiteral(y) = identifier {
                 return assert_eq!(y.value, 5);
+            }
+        }
+        assert!(false);
+    }
+
+    #[test]
+    fn it_should_parse_string_expression() {
+        let l = lexer::Lexer::new("\"hello world.\";".to_string());
+
+        let mut parser = Parser::new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+
+        assert_eq!(statements_count, 1);
+
+        let statement = &statements[0];
+        if let Statements::ExpressionStatement(x) = statement.clone() {
+            let identifier = x.expression;
+            if let Expressions::StringLiteral(y) = identifier {
+                return assert_eq!(y.value, "hello world.");
             }
         }
         assert!(false);
