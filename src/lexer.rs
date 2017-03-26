@@ -262,6 +262,7 @@ mod tests {
             let result = add(five, ten);
             \"foobar\";
             \"foo bar\";
+            [1, 2];
         ".to_string());
         let expects = [
             (token::TokenType::LET, "let"),
@@ -307,6 +308,13 @@ mod tests {
             (token::TokenType::STRING("foobar".to_string()), "foobar"),
             (token::TokenType::SEMICOLON, ";"),
             (token::TokenType::STRING("foo bar".to_string()), "foo bar"),
+            (token::TokenType::SEMICOLON, ";"),
+
+            (token::TokenType::LBRACKET, "["),
+            (token::TokenType::INT("1".to_string()), "1"),
+            (token::TokenType::COMMA, ","),
+            (token::TokenType::INT("2".to_string()), "2"),
+            (token::TokenType::RBRACKET, "]"),
             (token::TokenType::SEMICOLON, ";"),
 
             (token::TokenType::EOF, "")
