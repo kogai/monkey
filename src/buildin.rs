@@ -14,11 +14,14 @@ impl BuildInFunction for Len {
         }
         match xs.first() {
             Some(x) => {
-                if let ObjectType::StringType(ref s) = x.object_type {
-                    return Object::new_i32(s.len() as i32);
+                match x.object_type {
+                    ObjectType::StringType(ref s) => Object::new_i32(s.len() as i32),
+                    ObjectType::Array(ref a) => Object::new_i32(a.elements.len() as i32),
+                    _ => {
+                        Object::new_error(format!("argument to \"len\" not supported. got {:?}",
+                                                  x.object_type))
+                    }
                 }
-                Object::new_error(format!("argument to \"len\" not supported. got {:?}",
-                                          x.object_type))
             }
             None => {
                 Object::new_error(format!("wrong number of arguments. got {} want=1", xs.len()))
@@ -38,6 +41,27 @@ impl BuildIn {
             "len" => Some(Object { object_type: ObjectType::BuildIn(BuildIn::Len(Len)) }),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_in_let_should_recieve_string() {
+        let len = Len {};
+        let expect = [Object::new_string("test".to_string())].to_vec();
+        assert_eq!(len.call(expect).to_i32().unwrap(), 4);
+    }
+
+    #[test]
+    fn build_in_let_should_recieve_array() {
+        let len = Len {};
+        let array = Object::new_array([Object::new_i32(1), Object::new_i32(2), Object::new_i32(3)]
+                                          .to_vec());
+        let expect = [array].to_vec();
+        assert_eq!(len.call(expect).to_i32().unwrap(), 3);
     }
 }
 
