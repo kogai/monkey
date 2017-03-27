@@ -1,5 +1,6 @@
 use ast::{Node, Statements, AST, Expressions, IfExpression, BlockStatement, Identifier};
-use object::{Object, ObjectType, Null, Enviroment, Function, BuildIn, BuildInFunction};
+use object::{Object, ObjectType, Null, Enviroment, Function};
+use buildin::{BuildIn, BuildInFunction};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
 const FALSE: Object = Object { object_type: ObjectType::Boolean(false) };
