@@ -263,6 +263,7 @@ mod tests {
             \"foobar\";
             \"foo bar\";
             [1, 2];
+            { \"foo\": \"bar\" };
         ".to_string());
         let expects = [
             (token::TokenType::LET, "let"),
@@ -315,6 +316,13 @@ mod tests {
             (token::TokenType::COMMA, ","),
             (token::TokenType::INT("2".to_string()), "2"),
             (token::TokenType::RBRACKET, "]"),
+            (token::TokenType::SEMICOLON, ";"),
+
+            (token::TokenType::LBRACE, "{"),
+            (token::TokenType::STRING("foo".to_string()), "foo"),
+            (token::TokenType::COLON, ":"),
+            (token::TokenType::STRING("bar".to_string()), "bar"),
+            (token::TokenType::RBRACE, "}"),
             (token::TokenType::SEMICOLON, ";"),
 
             (token::TokenType::EOF, "")
