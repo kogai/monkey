@@ -48,6 +48,8 @@ fn is_infix_operator(t: TokenType) -> bool {
         NOTEQ => true,
         LT => true,
         GT => true,
+        LPAREN => true,
+        LBRACKET => true,
         _ => false,
     }
 }
@@ -252,16 +254,6 @@ impl Parser {
         }
     }
 
-    fn parse_call_expression(&mut self, function: Expressions) -> Expressions {
-        let token = self.current_token.clone();
-        let arguments = self.parse_expression_list(TokenType::RPAREN);
-        Expressions::new_call_expression(CallExpression {
-                                             token: token,
-                                             function: Box::new(function),
-                                             arguments: arguments,
-                                         })
-    }
-
     fn parse_expression_list(&mut self, end: TokenType) -> Vec<Box<Expressions>> {
         let mut arguments: Vec<Box<Expressions>> = vec![];
         if self.peek_token_is(end.clone()) {
@@ -298,18 +290,6 @@ impl Parser {
         }
     }
 
-    fn parse_index_expression(&mut self, left: Expressions) -> Expressions {
-        let token = self.current_token.clone();
-        self.next_token();
-        let index = self.parse_expression(Precedence::LOWEST);
-        self.expect_peek_token(TokenType::RBRACKET);
-        Expressions::IndexExpression(IndexExpression {
-                                         token: token,
-                                         index: Box::new(index),
-                                         left: Box::new(left),
-                                     })
-    }
-
     fn parse_prefix_expression(&mut self) -> Expressions {
         let current_token = self.current_token.clone();
         let operator = self.current_token.literal.clone();
@@ -337,6 +317,28 @@ impl Parser {
                                               left: Box::new(left),
                                               right: Box::new(right),
                                           })
+    }
+
+    fn parse_index_expression(&mut self, left: Expressions) -> Expressions {
+        let token = self.current_token.clone();
+        self.next_token();
+        let index = self.parse_expression(Precedence::LOWEST);
+        self.expect_peek_token(TokenType::RBRACKET);
+        Expressions::IndexExpression(IndexExpression {
+                                         token: token,
+                                         index: Box::new(index),
+                                         left: Box::new(left),
+                                     })
+    }
+
+    fn parse_call_expression(&mut self, function: Expressions) -> Expressions {
+        let token = self.current_token.clone();
+        let arguments = self.parse_expression_list(TokenType::RPAREN);
+        Expressions::new_call_expression(CallExpression {
+                                             token: token,
+                                             function: Box::new(function),
+                                             arguments: arguments,
+                                         })
     }
 
     fn parse_identifier(&mut self) -> Expressions {

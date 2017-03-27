@@ -60,6 +60,11 @@ impl BuildIn {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Array {
+    pub elements: Vec<Object>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObjectType {
     Integer(i32),
     StringType(String),
@@ -69,6 +74,7 @@ pub enum ObjectType {
     Error(String),
     Function(Function),
     BuildIn(BuildIn),
+    Array(Array),
 }
 
 impl ObjectType {
@@ -82,6 +88,7 @@ impl ObjectType {
             &ObjectType::Function(_) => 5,
             &ObjectType::StringType(_) => 6,
             &ObjectType::BuildIn(_) => 7,
+            &ObjectType::Array(_) => 8,
         }
     }
 }
@@ -102,6 +109,7 @@ impl Object {
             ObjectType::Error(ref x) => format!("Error: {}", x),
             ObjectType::Function(ref x) => format!("Function: {:?}", x),
             ObjectType::BuildIn(ref x) => format!("BuildIn: {:?}", x),
+            ObjectType::Array(ref x) => format!("Array: {:?}", x),
         }
     }
 
@@ -129,6 +137,10 @@ impl Object {
                                                   env: e.clone(),
                                               }),
         }
+    }
+
+    pub fn new_array(x: Vec<Object>) -> Self {
+        Object { object_type: ObjectType::Array(Array { elements: x }) }
     }
 
     #[allow(dead_code)]

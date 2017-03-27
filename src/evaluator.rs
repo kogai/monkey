@@ -34,7 +34,13 @@ pub fn eval(node: AST, env: &mut Enviroment) -> Object {
         ExpressionStatement(x) => eval(x.expression.to_ast(), env),
         IntegerLiteral(n) => Object::new_i32(n.value),
         StringLiteral(n) => Object::new_string(n.value),
-        ArrayLiteral(n) => NULL,
+        ArrayLiteral(x) => {
+            let elements = eval_expression(&x.elements, env);
+            match elements {
+                Ok(x) => Object::new_array(x),
+                Err(x) => x,
+            }
+        }
         Boolean(n) => native_bool_to_boolean_obj(n.value),
         PrefixExpression(x) => {
             let operator = x.operator.clone();
@@ -68,7 +74,17 @@ pub fn eval(node: AST, env: &mut Enviroment) -> Object {
                 Err(x) => x,
             }
         }
-        IndexExpression(z) => NULL,
+        IndexExpression(z) => {
+            let left = eval(z.left.to_ast(), env);
+            if is_error(&left) {
+                return left;
+            }
+            let index = eval(z.index.to_ast(), env);
+            if is_error(&index) {
+                return index;
+            }
+            eval_index_expression(left, index)
+        }
     }
 }
 
@@ -117,6 +133,21 @@ fn eval_expression(expressions: &Vec<Box<Expressions>>,
         result.push(evaluated);
     }
     Ok(result)
+}
+
+fn eval_index_expression(array: Object, index: Object) -> Object {
+    if let ObjectType::Array(xs) = array.object_type {
+        if let ObjectType::Integer(i) = index.object_type {
+            let max_index = xs.elements.len() - 1;
+            if max_index < i as usize || i < 0 {
+                return Object::new_error(format!("index out of range: max={} got={}",
+                                                 max_index,
+                                                 i));
+            }
+            return (&xs.elements)[i as usize].clone();
+        }
+    }
+    Object::new_error(format!("index operator not supported {:?}", index.object_type))
 }
 
 fn eval_program(statements: &Vec<Statements>, env: &mut Enviroment) -> Object {
@@ -444,6 +475,46 @@ mod tests {
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_i32().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_array_literal() {
+        let expects = [("[1, 2, 3][0]", 1),
+                       ("[1, 2, 3][1]", 2),
+                       ("[1, 2, 3][2]", 3),
+                       ("let i = 0; [1][i]", 1),
+                       ("[1, 2, 3][1 + 1]", 3),
+                       ("let myArray = [1, 2, 3]; myArray[2]", 3),
+                       ("let a = 0;let b = 0; a + -b", 0),
+                       ("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6),
+                       ("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", 2)];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_i32().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_array_error() {
+        let expects = [("[1, 2, 3][3]", "index out of range: max=2 got=3"),
+                       ("[1, 2, 3][-1]", "index out of range: max=2 got=-1")];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_error_message().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_array_index_expression() {
+        let result = test_eval("[1, 2 * 2, 3 + 3]".to_string());
+        if let ObjectType::Array(x) = result.object_type {
+            assert_eq!(x.elements.len(), 3);
+            assert_eq!(x.elements[0].to_i32().unwrap(), 1);
+            assert_eq!(x.elements[1].to_i32().unwrap(), 4);
+            assert_eq!(x.elements[2].to_i32().unwrap(), 6);
+        } else {
+            assert!(false);
         }
     }
 
