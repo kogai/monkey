@@ -42,6 +42,7 @@ pub fn eval(node: AST, env: &mut Enviroment) -> Object {
                 Err(x) => x,
             }
         }
+        HashLiteral(_) => NULL,
         Boolean(n) => native_bool_to_boolean_obj(n.value),
         PrefixExpression(x) => {
             let operator = x.operator.clone();

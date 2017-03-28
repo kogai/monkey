@@ -1,10 +1,12 @@
 use std::str::FromStr;
+use std::collections::HashMap;
 
 use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, LetStatement, ReturnStatement, ExpressionStatement, Identifier, PrefixExpression,
           InfixExpression, IntegerLiteral, Boolean, IfExpression, BlockStatement, FunctionLiteral,
-          CallExpression, Statements, Expressions, StringLiteral, ArrayLiteral, IndexExpression};
+          CallExpression, Statements, Expressions, StringLiteral, ArrayLiteral, IndexExpression,
+          HashLiteral};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -150,6 +152,7 @@ impl Parser {
             FALSE => Some(self.parse_boolean()),
             LPAREN => self.parse_group_expression(),
             LBRACKET => Some(self.parse_array_literal()),
+            LBRACE => Some(self.parse_hash_literal()),
             IF => Some(self.parse_if_expression()),
             FUNCTION => Some(self.parse_function_literal()),
             _ => None,
@@ -163,6 +166,32 @@ impl Parser {
                                            token: token,
                                            elements: elements,
                                        })
+    }
+
+    fn parse_hash_literal(&mut self) -> Expressions {
+        let token = self.current_token.clone();
+        let mut pairs: HashMap<Box<Expressions>, Box<Expressions>> = HashMap::new();
+        let mut keys: Vec<Expressions> = vec![];
+        let mut values: Vec<Expressions> = vec![];
+
+        while !self.peek_token_is(TokenType::RBRACE) {
+            self.next_token();
+            let key = self.parse_expression(Precedence::LOWEST);
+            self.expect_peek_token(TokenType::COLON);
+            self.next_token();
+            let value = self.parse_expression(Precedence::LOWEST);
+            keys.push(key.clone());
+            values.push(value.clone());
+            pairs.insert(Box::new(key), Box::new(value));
+            self.expect_peek_token(TokenType::COMMA);
+        }
+        self.expect_peek_token(TokenType::RBRACE);
+        Expressions::HashLiteral(HashLiteral {
+                                     token: token,
+                                     pairs: pairs,
+                                     keys: keys,
+                                     values: values,
+                                 })
     }
 
     fn parse_function_literal(&mut self) -> Expressions {
@@ -350,7 +379,10 @@ impl Parser {
 
     fn parse_integer_literal(&mut self) -> Option<Expressions> {
         let current_token = self.current_token.clone();
-        let value = i32::from_str(self.current_token.literal.as_str().clone());
+        let value = i32::from_str(self.current_token
+                                      .literal
+                                      .as_str()
+                                      .clone());
 
         match value {
             Ok(s) => {
@@ -927,6 +959,74 @@ mod tests {
                     if let Expressions::Boolean(right) = *infix_expression.right {
                         assert_eq!(right.value, expect.3);
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn it_should_parse_hash_literal_with_string() {
+        let l = lexer::Lexer::new("{ \"one\": 1, \"two\": 2, \"three\": 3 }".to_string());
+
+        let mut parser = Parser::new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+        assert_eq!(statements_count, 1);
+
+        if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+            if let Expressions::HashLiteral(x) = expression.expression {
+                assert_eq!(x.pairs.len(), 3);
+                let mut expected: HashMap<&str, String> = HashMap::new();
+                expected.insert("one", "1".to_string());
+                expected.insert("two", "2".to_string());
+                expected.insert("three", "3".to_string());
+
+                for (key, value) in x.pairs.iter() {
+                    assert_eq!(expected.get(key.string().as_str()).unwrap(),
+                               &value.string());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn it_should_parse_empty_hash_literal() {
+        let l = lexer::Lexer::new("{}".to_string());
+        let mut parser = Parser::new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+        assert_eq!(statements_count, 1);
+        if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+            if let Expressions::HashLiteral(x) = expression.expression {
+                assert_eq!(x.pairs.len(), 0);
+            }
+        }
+    }
+
+    #[test]
+    fn it_should_parse_hash_expression() {
+        let l = lexer::Lexer::new("{ \"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5 }"
+                                      .to_string());
+
+        let mut parser = Parser::new(l);
+        let program = parser.parse_program();
+        let statements = program.statements;
+        let statements_count = statements.len();
+        assert_eq!(statements_count, 1);
+
+        if let Statements::ExpressionStatement(expression) = statements[0].clone() {
+            if let Expressions::HashLiteral(x) = expression.expression {
+                assert_eq!(x.pairs.len(), 3);
+                let mut expected: HashMap<&str, String> = HashMap::new();
+                expected.insert("one", "(0 + 1)".to_string());
+                expected.insert("two", "(10 - 8)".to_string());
+                expected.insert("three", "(15 / 5)".to_string());
+
+                for (key, value) in x.pairs.iter() {
+                    assert_eq!(expected.get(key.string().as_str()).unwrap(),
+                               &value.string());
                 }
             }
         }
