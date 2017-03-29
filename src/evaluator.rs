@@ -1,5 +1,6 @@
-use ast::{Node, Statements, AST, Expressions, IfExpression, BlockStatement, Identifier};
-use object::{Object, ObjectType, Null, Enviroment, Function};
+use std::collections::HashMap;
+use ast::{Node, Statements, AST, Expressions, IfExpression, BlockStatement, Identifier, HashLiteral};
+use object::{Object, ObjectType, Null, Enviroment, Function, HashKey, HashType};
 use buildin::{BuildIn, BuildInFunction};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
@@ -42,7 +43,7 @@ pub fn eval(node: AST, env: &mut Enviroment) -> Object {
                 Err(x) => x,
             }
         }
-        HashLiteral(_) => NULL,
+        HashLiteral(h) => eval_hash_literal(h, env),
         Boolean(n) => native_bool_to_boolean_obj(n.value),
         PrefixExpression(x) => {
             let operator = x.operator.clone();
@@ -205,6 +206,32 @@ fn eval_if_expression(x: &IfExpression, env: &mut Enviroment) -> Object {
             };
             NULL
         }
+    }
+}
+
+fn eval_hash_literal(x: HashLiteral, env: &mut Enviroment) -> Object {
+    let mut pairs: HashMap<HashKey, Object> = HashMap::new();
+    
+    for (k, v) in x.pairs.iter() {
+        let key = eval(k.to_ast(), env);
+        if is_error(&key) {
+            return key;
+        }
+
+        let value = eval(v.to_ast(), env);
+        if is_error(&value) {
+            return value;
+        }
+
+        if let Some(hash_key) = HashKey::new(&key) {
+            pairs.insert(hash_key, value);
+        } else {
+            return Object::new_error(format!("hash key not support for {:?}", key.object_type));
+        }
+    }
+
+    Object{
+        object_type: ObjectType::HashType(HashType { pairs: pairs})
     }
 }
 
@@ -533,6 +560,46 @@ mod tests {
         for expect in error_expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_error_message().unwrap(), expect.1);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_hash_literal() {
+        let result = test_eval("
+        let x = {
+            \"one\": 10 - 9,
+            \"two\": 1 + 1,
+            \"thr\" + \"ee\": 6 / 2,
+            4: 4,
+            true: 5,
+            false: 6
+        };
+        "
+                                       .to_string());
+        if let ObjectType::HashType(x) = result.object_type {
+            let key_1 = HashKey::StringType("one".to_string());
+            let key_2 = HashKey::StringType("two".to_string());
+            let key_3 = HashKey::StringType("three".to_string());
+            let key_4 = HashKey::Integer(4 as i32);
+            let key_5 = HashKey::Boolean(true);
+            let key_6 = HashKey::Boolean(false);
+
+            let value_1 = Object::new_i32(1);
+            let value_2 = Object::new_i32(2);
+            let value_3 = Object::new_i32(3);
+            let value_4 = Object::new_i32(4);
+            let value_5 = Object::new_i32(5);
+            let value_6 = Object::new_i32(6);
+
+            assert_eq!(*x.pairs.get(&key_1).unwrap(), value_1);
+            assert_eq!(*x.pairs.get(&key_2).unwrap(), value_2);
+            assert_eq!(*x.pairs.get(&key_3).unwrap(), value_3);
+            assert_eq!(*x.pairs.get(&key_4).unwrap(), value_4);
+            assert_eq!(*x.pairs.get(&key_5).unwrap(), value_5);
+            assert_eq!(*x.pairs.get(&key_6).unwrap(), value_6);
+
+        } else {
+            assert!(false);
         }
     }
 }

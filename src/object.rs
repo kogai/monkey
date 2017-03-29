@@ -24,6 +24,29 @@ pub struct Array {
     pub elements: Vec<Object>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum HashKey {
+    Integer(i32),
+    StringType(String),
+    Boolean(bool),
+}
+
+impl HashKey {
+    pub fn new(x: &Object) -> Option<Self> {
+        match x.object_type {
+            ObjectType::Integer(ref x) => Some(HashKey::Integer(x.clone())),
+            ObjectType::StringType(ref x) => Some(HashKey::StringType(x.clone())),
+            ObjectType::Boolean(ref x) => Some(HashKey::Boolean(x.clone())),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HashType {
+    pub pairs: HashMap<HashKey, Object>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObjectType {
     Integer(i32),
@@ -35,6 +58,7 @@ pub enum ObjectType {
     Function(Function),
     BuildIn(BuildIn),
     Array(Array),
+    HashType(HashType),
 }
 
 impl ObjectType {
@@ -49,6 +73,7 @@ impl ObjectType {
             &ObjectType::StringType(_) => 6,
             &ObjectType::BuildIn(_) => 7,
             &ObjectType::Array(_) => 8,
+            &ObjectType::HashType(_) => 9,
         }
     }
 }
@@ -70,6 +95,7 @@ impl Object {
             ObjectType::Function(ref x) => format!("Function: {:?}", x),
             ObjectType::BuildIn(ref x) => format!("BuildIn: {:?}", x),
             ObjectType::Array(ref x) => format!("Array: {:?}", x),
+            ObjectType::HashType(ref x) => format!("HashType: {:?}", x),
         }
     }
 
@@ -174,3 +200,20 @@ impl Enviroment {
         value
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_should_equivalence_hash_key() {
+        let k1 = HashKey::StringType("my-key".to_string());
+        let k2 = HashKey::StringType("my-key".to_string());
+        let v = Object::new_string("monkey".to_string());
+        let mut p = HashMap::new();
+        p.insert(k1.clone(), v);
+        let h = HashType { pairs: p };
+        assert_eq!(h.pairs.get(&k1), h.pairs.get(&k2));
+    }
+}
+
