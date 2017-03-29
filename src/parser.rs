@@ -1,6 +1,4 @@
 use std::str::FromStr;
-use std::collections::HashMap;
-
 use token::{Token, TokenType};
 use lexer::Lexer;
 use ast::{Program, LetStatement, ReturnStatement, ExpressionStatement, Identifier, PrefixExpression,
@@ -480,6 +478,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
     use ast::Node;
     use lexer;
 

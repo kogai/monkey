@@ -280,14 +280,6 @@ impl Node for Expressions {
 
 impl Expression for Expressions {}
 
-// impl Hash for Expressions {
-//     fn hash<H>(&self, state: &mut H)
-//         where H: Hasher
-//     {
-//         unimplemented!();
-//     }
-// }
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Program {
     pub statements: Vec<Statements>,

@@ -5,7 +5,7 @@ use buildin::{BuildIn, BuildInFunction};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
 const FALSE: Object = Object { object_type: ObjectType::Boolean(false) };
-const NULL: Object = Object { object_type: ObjectType::Null(Null) };
+pub const NULL: Object = Object { object_type: ObjectType::Null(Null) };
 
 fn is_error(x: &Object) -> bool {
     x.object_type.to_type() == Object::new_error("".to_string()).object_type.to_type()
@@ -101,6 +101,7 @@ fn apply_function(func: Object, args: Vec<Object>) -> Object {
         ObjectType::BuildIn(b) => {
             match b {
                 BuildIn::Len(l) => l.call(args),
+                BuildIn::PrintLn(l) => l.call(args),
             }
         }
         _ => Object::new_error(format!("not a function {:?}", func)),

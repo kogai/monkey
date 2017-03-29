@@ -1,4 +1,5 @@
 use object::{Object, ObjectType};
+use evaluator::NULL;
 
 pub trait BuildInFunction {
     fn call(&self, Vec<Object>) -> Object;
@@ -31,14 +32,30 @@ impl BuildInFunction for Len {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrintLn;
+
+impl BuildInFunction for PrintLn {
+    fn call(&self, xs: Vec<Object>) -> Object {
+        println!("{}",
+                 xs.into_iter()
+                     .map(|x| x.inspect())
+                     .collect::<Vec<String>>()
+                     .join(" "));
+        NULL
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BuildIn {
     Len(Len),
+    PrintLn(PrintLn),
 }
 
 impl BuildIn {
     pub fn set_from_string(function_name: &String) -> Option<Object> {
         match function_name.as_str() {
             "len" => Some(Object { object_type: ObjectType::BuildIn(BuildIn::Len(Len)) }),
+            "puts" => Some(Object { object_type: ObjectType::BuildIn(BuildIn::PrintLn(PrintLn)) }),
             _ => None,
         }
     }
