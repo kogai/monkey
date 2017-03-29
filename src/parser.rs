@@ -170,28 +170,20 @@ impl Parser {
 
     fn parse_hash_literal(&mut self) -> Expressions {
         let token = self.current_token.clone();
-        let mut pairs: HashMap<Box<Expressions>, Box<Expressions>> = HashMap::new();
-        let mut keys: Vec<Expressions> = vec![];
-        let mut values: Vec<Expressions> = vec![];
+        let mut hash_map = HashLiteral::new(token);
 
         while !self.peek_token_is(TokenType::RBRACE) {
             self.next_token();
             let key = self.parse_expression(Precedence::LOWEST);
             self.expect_peek_token(TokenType::COLON);
             self.next_token();
+
             let value = self.parse_expression(Precedence::LOWEST);
-            keys.push(key.clone());
-            values.push(value.clone());
-            pairs.insert(Box::new(key), Box::new(value));
+            hash_map.set_pairs(key, value);
             self.expect_peek_token(TokenType::COMMA);
         }
         self.expect_peek_token(TokenType::RBRACE);
-        Expressions::HashLiteral(HashLiteral {
-                                     token: token,
-                                     pairs: pairs,
-                                     keys: keys,
-                                     values: values,
-                                 })
+        Expressions::HashLiteral(hash_map)
     }
 
     fn parse_function_literal(&mut self) -> Expressions {

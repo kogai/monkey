@@ -364,8 +364,28 @@ pub struct ArrayLiteral {
 pub struct HashLiteral {
     pub token: Token,
     pub pairs: HashMap<Box<Expressions>, Box<Expressions>>,
-    pub keys: Vec<Expressions>,
-    pub values: Vec<Expressions>,
+    keys: Vec<Expressions>,
+    values: Vec<Expressions>,
+}
+
+impl HashLiteral {
+    pub fn new(token: Token) -> Self {
+        let pairs: HashMap<Box<Expressions>, Box<Expressions>> = HashMap::new();
+        let keys: Vec<Expressions> = vec![];
+        let values: Vec<Expressions> = vec![];
+        HashLiteral {
+            token: token,
+            pairs: pairs,
+            keys: keys,
+            values: values,
+        }
+    }
+
+    pub fn set_pairs(&mut self, key: Expressions, value: Expressions) {
+        self.keys.push(key.clone());
+        self.values.push(value.clone());
+        self.pairs.insert(Box::new(key), Box::new(value));
+    }
 }
 
 impl Hash for HashLiteral {
