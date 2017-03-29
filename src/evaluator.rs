@@ -138,19 +138,38 @@ fn eval_expression(expressions: &Vec<Box<Expressions>>,
     Ok(result)
 }
 
-fn eval_index_expression(array: Object, index: Object) -> Object {
-    if let ObjectType::Array(xs) = array.object_type {
-        if let ObjectType::Integer(i) = index.object_type {
-            let max_index = xs.elements.len() - 1;
-            if max_index < i as usize || i < 0 {
-                return Object::new_error(format!("index out of range: max={} got={}",
-                                                 max_index,
-                                                 i));
+fn eval_index_expression(left: Object, index: Object) -> Object {
+    match left.object_type {
+        ObjectType::Array(xs) => {
+            if let ObjectType::Integer(i) = index.object_type {
+                let max_index = xs.elements.len() - 1;
+                if max_index < i as usize || i < 0 {
+                    Object::new_error(format!("index out of range: max={} got={}",
+                                                    max_index,
+                                                    i))
+                } else {
+                    (&xs.elements)[i as usize].clone()
+                }
+            } else {
+                Object::new_error(format!("index operator not supported {:?}", index.object_type))
             }
-            return (&xs.elements)[i as usize].clone();
-        }
+        },
+        ObjectType::HashType(xs) => eval_hash_index_expression(xs, index),
+        _ => Object::new_error(format!("index operator not supported {:?}", index.object_type)),
     }
-    Object::new_error(format!("index operator not supported {:?}", index.object_type))
+}
+
+fn eval_hash_index_expression(left: HashType, index: Object) -> Object {
+    let maybe_key = HashKey::new(&index);
+    match maybe_key {
+        Some(key) => {
+            match left.pairs.get(&key) {
+                Some(x) => x.clone(),
+                None => NULL,
+            }
+        },
+        None => Object::new_error(format!("unusable as hash key: {:?}", index.object_type)),
+    }
 }
 
 fn eval_program(statements: &Vec<Statements>, env: &mut Enviroment) -> Object {
@@ -600,6 +619,23 @@ mod tests {
 
         } else {
             assert!(false);
+        }
+    }
+
+    #[test]
+    fn it_should_evaluate_hash_index_expression() {
+        let expects = [
+            ("{\"foo\": 5}[\"foo\"]", Some(5)),
+            ("{\"foo\": 5}[\"bar\"]", None),
+            ("let key = \"foo\"; {\"foo\": 5}[key]", Some(5)),
+            ("{}[\"bar\"]", None),
+            ("{5: 5}[5]", Some(5)),
+            ("{true: 5}[true]", Some(5)),
+            ("{false: 5}[false]", Some(5)),
+        ];
+        for expect in expects.iter() {
+            let result = test_eval(expect.0.to_string());
+            assert_eq!(result.to_i32(), expect.1);
         }
     }
 }
