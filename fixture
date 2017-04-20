@@ -7,3 +7,5 @@ let add = fn(x, y) {
 
 let result = add(five, ten);
 let array = [1, 2, 3];
+
+let method = {"add_one": fn(x) { x + 1; }, }; method["add_one"](10);

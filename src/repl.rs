@@ -15,16 +15,14 @@ pub fn run() {
     io::stdout().flush().unwrap();
 
     loop {
-        io::stdin()
-            .read_line(&mut scan)
-            .expect("Failed to read line");
+        io::stdin().read_line(&mut scan).expect("Failed to read line");
 
         let lex = lexer::Lexer::new(scan.clone());
         let mut p = parser::Parser::new(lex);
         let program = p.parse_program();
 
         if p.errors.len() > 0 {
-            for error in p.errors.into_iter() {
+            for error in p.errors {
                 println!("{}", error);
             }
             continue;

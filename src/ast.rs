@@ -198,16 +198,16 @@ impl Node for Expressions {
             &Expressions::IntegerLiteral(ref x) => format!("{}", x.value),
             &Expressions::StringLiteral(ref x) => x.value.clone(),
             &Expressions::ArrayLiteral(ref x) => {
-                let elements = (&x.elements)
-                    .into_iter()
-                    .map(|p| p.string())
-                    .collect::<Vec<String>>()
-                    .join(", ");
+                let elements = &(x.elements)
+                                    .iter()
+                                    .map(|p| p.string())
+                                    .collect::<Vec<_>>()
+                                    .join(", ");
                 format!("[{}]", elements)
             }
             &Expressions::HashLiteral(ref x) => {
                 let mut pairs: Vec<String> = Vec::new();
-                for (key, value) in x.pairs.iter() {
+                for (key, value) in &x.pairs {
                     pairs.push(format!("{}: {}", key.string(), value.string()));
                 }
                 format!("{{{}}}", pairs.join(","))
@@ -236,9 +236,9 @@ impl Node for Expressions {
             }
             &Expressions::FunctionLiteral(ref x) => {
                 let parameters_string = (&x.parameters)
-                    .into_iter()
+                    .iter()
                     .map(|p| p.to_enum().string())
-                    .collect::<Vec<String>>()
+                    .collect::<Vec<_>>()
                     .join(", ");
 
                 format!("{}({}) {}",
@@ -248,9 +248,9 @@ impl Node for Expressions {
             }
             &Expressions::CallExpression(ref x) => {
                 let arguments_string = (&x.arguments)
-                    .into_iter()
+                    .iter()
                     .map(|p| p.string())
-                    .collect::<Vec<String>>()
+                    .collect::<Vec<_>>()
                     .join(", ");
                 format!("{}({})", x.function.string(), arguments_string)
             }
@@ -444,6 +444,6 @@ pub struct CallExpression {
 }
 
 fn fold_statements(x: &Vec<Statements>) -> String {
-    x.into_iter().fold("".to_string(), |acc, s| format!("{}{}", acc, s.string()))
+    x.iter().fold("".to_string(), |acc, s| acc + &s.string())
 }
 

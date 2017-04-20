@@ -37,7 +37,7 @@ pub struct PrintLn;
 impl BuildInFunction for PrintLn {
     fn call(&self, xs: Vec<Object>) -> Object {
         println!("{}",
-                 xs.into_iter()
+                 xs.iter()
                      .map(|x| x.inspect())
                      .collect::<Vec<String>>()
                      .join(" "));
