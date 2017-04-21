@@ -40,16 +40,7 @@ fn precendences(token: TokenType) -> Precedence {
 fn is_infix_operator(t: TokenType) -> bool {
     use self::TokenType::*;
     match t {
-        PLUS => true,
-        MINUS => true,
-        DIVIDE => true,
-        MULTIPLY => true,
-        EQ => true,
-        NOTEQ => true,
-        LT => true,
-        GT => true,
-        LPAREN => true,
-        LBRACKET => true,
+        PLUS | MINUS | DIVIDE | MULTIPLY | EQ | NOTEQ | LT | GT | LPAREN | LBRACKET => true,
         _ => false,
     }
 }
