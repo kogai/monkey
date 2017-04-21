@@ -11,6 +11,8 @@ pub fn is_digit(s: &String) -> bool {
     }
 }
 
+pub static EMPTY_STR: &'static str = "";
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -35,3 +37,4 @@ mod tests {
         assert!(is_digit(&"9".to_string()));
     }
 }
+

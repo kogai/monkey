@@ -1,5 +1,5 @@
 use lexer::token;
-use utils::{is_digit, is_letter};
+use utils::{is_digit, is_letter, EMPTY_STR};
 
 #[derive(Debug, Clone)]
 pub struct Lexer {
@@ -13,7 +13,7 @@ impl Lexer {
     pub fn new(input: String) -> Self {
         let mut l = Lexer {
             input: input,
-            current_char: "".to_string(),
+            current_char: EMPTY_STR.to_string(),
             position: 0,
             read_position: 1,
         };
@@ -26,7 +26,7 @@ impl Lexer {
 
         self.current_char = match self.input.chars().nth(position) {
             Some(x) => x.to_string(),
-            None => "".to_string(),
+            None => EMPTY_STR.to_string(),
         };
 
         self.position = self.read_position;
@@ -36,7 +36,7 @@ impl Lexer {
     fn peak_char(&self) -> String {
         match self.input.chars().nth((self.read_position - 1) as usize) {
             Some(x) => x.to_string(),
-            None => "".to_string(),
+            None => EMPTY_STR.to_string(),
         }
     }
 
@@ -128,18 +128,19 @@ impl Lexer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use self::token::TokenType::*;
 
     #[test]
     fn it_should_analysis_arithmetic() {
         let mut l = Lexer::new("!-*/<>".to_string());
         let expects = [
-            (token::TokenType::BANG, "!"),
-            (token::TokenType::MINUS, "-"),
-            (token::TokenType::MULTIPLY, "*"),
-            (token::TokenType::DIVIDE, "/"),
-            (token::TokenType::LT, "<"),
-            (token::TokenType::GT, ">"),
-            (token::TokenType::EOF, "")
+            (BANG, "!"),
+            (MINUS, "-"),
+            (MULTIPLY, "*"),
+            (DIVIDE, "/"),
+            (LT, "<"),
+            (GT, ">"),
+            (EOF, "")
         ];
 
         for expect in expects.iter() {
@@ -158,31 +159,31 @@ mod tests {
             return false;
         }
         ".to_string());
-        let expects = [
-            (token::TokenType::IF, "if"),
-            (token::TokenType::LPAREN, "("),
-            (token::TokenType::INT("5".to_string()), "5"),
-            (token::TokenType::LT, "<"),
-            (token::TokenType::INT("10".to_string()), "10"),
-            (token::TokenType::RPAREN, ")"),
-            (token::TokenType::LBRACE, "{"),
-            (token::TokenType::RETURN, "return"),
-            (token::TokenType::TRUE, "true"),
-            (token::TokenType::SEMICOLON, ";"),
-            (token::TokenType::RBRACE, "}"),
-            (token::TokenType::ELSE, "else"),
-            (token::TokenType::LBRACE, "{"),
-            (token::TokenType::RETURN, "return"),
-            (token::TokenType::FALSE, "false"),
-            (token::TokenType::SEMICOLON, ";"),
-            (token::TokenType::RBRACE, "}"),
-            (token::TokenType::EOF, "")
+        let expects = vec![
+            (IF, "if"),
+            (LPAREN, "("),
+            (INT("5".to_string()), "5"),
+            (LT, "<"),
+            (INT("10".to_string()), "10"),
+            (RPAREN, ")"),
+            (LBRACE, "{"),
+            (RETURN, "return"),
+            (TRUE, "true"),
+            (SEMICOLON, ";"),
+            (RBRACE, "}"),
+            (ELSE, "else"),
+            (LBRACE, "{"),
+            (RETURN, "return"),
+            (FALSE, "false"),
+            (SEMICOLON, ";"),
+            (RBRACE, "}"),
+            (EOF, "")
         ];
 
-        for expect in expects.iter() {
+        for (token_type, literal) in expects {
             let t = l.next_token();
-            assert_eq!(t.token_type, expect.0);
-            assert_eq!(t.literal, expect.1);
+            assert_eq!(t.token_type, token_type);
+            assert_eq!(t.literal, literal);
         }
     }
 
@@ -193,34 +194,34 @@ mod tests {
             if (5 != 10) 
         ".to_string());
 
-        let expects = [
-            (token::TokenType::IF, "if"),
-            (token::TokenType::LPAREN, "("),
-            (token::TokenType::INT("10".to_string()), "10"),
-            (token::TokenType::EQ, "=="),
-            (token::TokenType::INT("10".to_string()), "10"),
-            (token::TokenType::RPAREN, ")"),
+        let expects = vec![
+            (IF, "if"),
+            (LPAREN, "("),
+            (INT("10".to_string()), "10"),
+            (EQ, "=="),
+            (INT("10".to_string()), "10"),
+            (RPAREN, ")"),
 
-            (token::TokenType::IF, "if"),
-            (token::TokenType::LPAREN, "("),
-            (token::TokenType::INT("5".to_string()), "5"),
-            (token::TokenType::NOTEQ, "!="),
-            (token::TokenType::INT("10".to_string()), "10"),
-            (token::TokenType::RPAREN, ")"),
+            (IF, "if"),
+            (LPAREN, "("),
+            (INT("5".to_string()), "5"),
+            (NOTEQ, "!="),
+            (INT("10".to_string()), "10"),
+            (RPAREN, ")"),
 
-            (token::TokenType::EOF, "")
+            (EOF, "")
         ];
 
-        for expect in expects.iter() {
+        for (token_type, literal) in expects {
             let t = l.next_token();
-            assert_eq!(t.token_type, expect.0);
-            assert_eq!(t.literal, expect.1);
+            assert_eq!(t.token_type, token_type);
+            assert_eq!(t.literal, literal);
         }
     }
 
     #[test]
     fn it_analysis_simple_token() {
-        let mut l = Lexer::new("
+        let mut l = Lexer::new(r#"
             let five = 5;
             let ten = 10;
 
@@ -229,78 +230,79 @@ mod tests {
             };
 
             let result = add(five, ten);
-            \"foobar\";
-            \"foo bar\";
+            "foobar";
+            "foo bar";
             [1, 2];
-            { \"foo\": \"bar\" };
-        ".to_string());
-        let expects = [
-            (token::TokenType::LET, "let"),
-            (token::TokenType::IDENT("five".to_string()), "five"),
-            (token::TokenType::ASSIGN, "="),
-            (token::TokenType::INT("5".to_string()), "5"),
-            (token::TokenType::SEMICOLON, ";"),
+            { "foo": "bar" };
+        "#.to_string());
 
-            (token::TokenType::LET, "let"),
-            (token::TokenType::IDENT("ten".to_string()), "ten"),
-            (token::TokenType::ASSIGN, "="),
-            (token::TokenType::INT("10".to_string()), "10"),
-            (token::TokenType::SEMICOLON, ";"),
+        let expects = vec![
+            (LET, "let"),
+            (IDENT("five".to_string()), "five"),
+            (ASSIGN, "="),
+            (INT("5".to_string()), "5"),
+            (SEMICOLON, ";"),
 
-            (token::TokenType::LET, "let"),
-            (token::TokenType::IDENT("add".to_string()), "add"),
-            (token::TokenType::ASSIGN, "="),
-            (token::TokenType::FUNCTION, "fn"),
-            (token::TokenType::LPAREN, "("),
-            (token::TokenType::IDENT("x".to_string()), "x"),
-            (token::TokenType::COMMA, ","),
-            (token::TokenType::IDENT("y".to_string()), "y"),
-            (token::TokenType::RPAREN, ")"),
-            (token::TokenType::LBRACE, "{"),
-            (token::TokenType::IDENT("x".to_string()), "x"),
-            (token::TokenType::PLUS, "+"),
-            (token::TokenType::IDENT("y".to_string()), "y"),
-            (token::TokenType::SEMICOLON, ";"),
-            (token::TokenType::RBRACE, "}"),
-            (token::TokenType::SEMICOLON, ";"),
+            (LET, "let"),
+            (IDENT("ten".to_string()), "ten"),
+            (ASSIGN, "="),
+            (INT("10".to_string()), "10"),
+            (SEMICOLON, ";"),
 
-            (token::TokenType::LET, "let"),
-            (token::TokenType::IDENT("result".to_string()), "result"),
-            (token::TokenType::ASSIGN, "="),
-            (token::TokenType::IDENT("add".to_string()), "add"),
-            (token::TokenType::LPAREN, "("),
-            (token::TokenType::IDENT("five".to_string()), "five"),
-            (token::TokenType::COMMA, ","),
-            (token::TokenType::IDENT("ten".to_string()), "ten"),
-            (token::TokenType::RPAREN, ")"),
-            (token::TokenType::SEMICOLON, ";"),
+            (LET, "let"),
+            (IDENT("add".to_string()), "add"),
+            (ASSIGN, "="),
+            (FUNCTION, "fn"),
+            (LPAREN, "("),
+            (IDENT("x".to_string()), "x"),
+            (COMMA, ","),
+            (IDENT("y".to_string()), "y"),
+            (RPAREN, ")"),
+            (LBRACE, "{"),
+            (IDENT("x".to_string()), "x"),
+            (PLUS, "+"),
+            (IDENT("y".to_string()), "y"),
+            (SEMICOLON, ";"),
+            (RBRACE, "}"),
+            (SEMICOLON, ";"),
 
-            (token::TokenType::STRING("foobar".to_string()), "foobar"),
-            (token::TokenType::SEMICOLON, ";"),
-            (token::TokenType::STRING("foo bar".to_string()), "foo bar"),
-            (token::TokenType::SEMICOLON, ";"),
+            (LET, "let"),
+            (IDENT("result".to_string()), "result"),
+            (ASSIGN, "="),
+            (IDENT("add".to_string()), "add"),
+            (LPAREN, "("),
+            (IDENT("five".to_string()), "five"),
+            (COMMA, ","),
+            (IDENT("ten".to_string()), "ten"),
+            (RPAREN, ")"),
+            (SEMICOLON, ";"),
 
-            (token::TokenType::LBRACKET, "["),
-            (token::TokenType::INT("1".to_string()), "1"),
-            (token::TokenType::COMMA, ","),
-            (token::TokenType::INT("2".to_string()), "2"),
-            (token::TokenType::RBRACKET, "]"),
-            (token::TokenType::SEMICOLON, ";"),
+            (STRING("foobar".to_string()), "foobar"),
+            (SEMICOLON, ";"),
+            (STRING("foo bar".to_string()), "foo bar"),
+            (SEMICOLON, ";"),
 
-            (token::TokenType::LBRACE, "{"),
-            (token::TokenType::STRING("foo".to_string()), "foo"),
-            (token::TokenType::COLON, ":"),
-            (token::TokenType::STRING("bar".to_string()), "bar"),
-            (token::TokenType::RBRACE, "}"),
-            (token::TokenType::SEMICOLON, ";"),
+            (LBRACKET, "["),
+            (INT("1".to_string()), "1"),
+            (COMMA, ","),
+            (INT("2".to_string()), "2"),
+            (RBRACKET, "]"),
+            (SEMICOLON, ";"),
 
-            (token::TokenType::EOF, "")
+            (LBRACE, "{"),
+            (STRING("foo".to_string()), "foo"),
+            (COLON, ":"),
+            (STRING("bar".to_string()), "bar"),
+            (RBRACE, "}"),
+            (SEMICOLON, ";"),
+
+            (EOF, "")
         ];
 
-        for expect in expects.iter() {
+        for (token_type, literal) in expects {
             let t = l.next_token();
-            assert_eq!(t.token_type, expect.0);
-            assert_eq!(t.literal, expect.1);
+            assert_eq!(t.token_type, token_type);
+            assert_eq!(t.literal, literal);
         }
     }
 }
