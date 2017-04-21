@@ -3,10 +3,11 @@ use utils::{is_digit, is_letter, EMPTY_STR};
 
 #[derive(Debug, Clone)]
 pub struct Lexer {
-    pub input: String,
-    pub current_char: String,
-    pub position: i32,
-    pub read_position: i32,
+    input: String,
+    current_char: String,
+    position: i32,
+    read_position: i32,
+    line: u8,
 }
 
 impl Lexer {
@@ -16,6 +17,7 @@ impl Lexer {
             current_char: EMPTY_STR.to_string(),
             position: 0,
             read_position: 1,
+            line: 1,
         };
         l.read_char();
         l
@@ -43,6 +45,8 @@ impl Lexer {
     pub fn next_token(&mut self) -> token::Token {
         self.skip_white_space();
         let current_char = &self.current_char.clone();
+        let position = self.position as u8;
+
         let mut is_string = false;
         let seed = match current_char {
             x if is_letter(x) => self.read_identifier(),
@@ -67,7 +71,7 @@ impl Lexer {
             },
         };
 
-        token::Token::new(seed, is_string)
+        token::Token::new(seed, is_string, self.line, position)
     }
 
     fn read_string(&mut self) -> String {
@@ -114,14 +118,20 @@ impl Lexer {
     }
 
     pub fn skip_white_space(&mut self) {
-        let is_whitespace = match self.current_char.chars().last() {
-            Some(x) => x.is_whitespace(),
-            None => false,
+        let (is_whitespace, is_newline) = match self.current_char.chars().last() {
+            Some(x) => {
+                (x.is_whitespace(), x == '\n')
+            },
+            _ => (false, false),
         };
+
         if is_whitespace {
             self.read_char();
             self.skip_white_space()
-        }
+        };
+        if is_newline {
+            self.line = self.line + 1;
+        };
     }
 }
 
@@ -133,20 +143,21 @@ mod tests {
     #[test]
     fn it_should_analysis_arithmetic() {
         let mut l = Lexer::new("!-*/<>".to_string());
-        let expects = [
-            (BANG, "!"),
-            (MINUS, "-"),
-            (MULTIPLY, "*"),
-            (DIVIDE, "/"),
-            (LT, "<"),
-            (GT, ">"),
-            (EOF, "")
+        let expects = vec![
+            (BANG, "!", 1),
+            (MINUS, "-", 2),
+            (MULTIPLY, "*", 3),
+            (DIVIDE, "/", 4),
+            (LT, "<", 5),
+            (GT, ">", 6),
+            (EOF, "", 7)
         ];
 
-        for expect in expects.iter() {
+        for (token_type, literal, column_num) in expects {
             let t = l.next_token();
-            assert_eq!(t.token_type, expect.0);
-            assert_eq!(t.literal, expect.1);
+            assert_eq!(t.token_type, token_type);
+            assert_eq!(t.literal, literal);
+            assert_eq!(t.column_num, column_num);
         }
     }
 
@@ -195,26 +206,27 @@ mod tests {
         ".to_string());
 
         let expects = vec![
-            (IF, "if"),
-            (LPAREN, "("),
-            (INT("10".to_string()), "10"),
-            (EQ, "=="),
-            (INT("10".to_string()), "10"),
-            (RPAREN, ")"),
+            (IF, "if", 2),
+            (LPAREN, "(", 2),
+            (INT("10".to_string()), "10", 2),
+            (EQ, "==", 2),
+            (INT("10".to_string()), "10", 2),
+            (RPAREN, ")", 2),
 
-            (IF, "if"),
-            (LPAREN, "("),
-            (INT("5".to_string()), "5"),
-            (NOTEQ, "!="),
-            (INT("10".to_string()), "10"),
-            (RPAREN, ")"),
+            (IF, "if", 3),
+            (LPAREN, "(", 3),
+            (INT("5".to_string()), "5", 3),
+            (NOTEQ, "!=", 3),
+            (INT("10".to_string()), "10", 3),
+            (RPAREN, ")", 3),
 
-            (EOF, "")
+            (EOF, "", 4)
         ];
 
-        for (token_type, literal) in expects {
+        for (token_type, literal, line_num) in expects {
             let t = l.next_token();
             assert_eq!(t.token_type, token_type);
+            assert_eq!(t.line_num, line_num);
             assert_eq!(t.literal, literal);
         }
     }

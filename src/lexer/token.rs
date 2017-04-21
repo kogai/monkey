@@ -76,23 +76,29 @@ impl TokenType {
 pub struct Token {
     pub token_type: TokenType,
     pub literal: String,
+    pub line_num: u8,
+    pub column_num: u8,
 }
 
 impl Token {
-    pub fn new(s: String, is_string: bool) -> Self {
+    pub fn new(s: String, is_string: bool, line_num: u8, column_num: u8) -> Self {
         if is_string {
-            return Token::new_string(s);
+            return Token::new_string(s, line_num, column_num);
         }
         Token {
             token_type: TokenType::from_string(&s),
             literal: s,
+            line_num: line_num,
+            column_num: column_num,
         }
     }
 
-    fn new_string(s: String) -> Self {
+    fn new_string(s: String, line_num: u8, column_num: u8) -> Self {
         Token {
             token_type: TokenType::STRING(s.clone()),
             literal: s,
+            line_num: line_num,
+            column_num: column_num,
         }
     }
 }
