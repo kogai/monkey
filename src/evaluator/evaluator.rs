@@ -1,6 +1,8 @@
 use std::collections::HashMap;
-use ast::{Node, Statements, AST, Expressions, IfExpression, BlockStatement, Identifier, HashLiteral};
-use object::{Object, ObjectType, Null, Enviroment, Function, HashKey, HashType};
+
+use parser::ast::{Node, Statements, AST, Expressions, IfExpression, BlockStatement, Identifier,
+                  HashLiteral};
+use evaluator::object::{Object, ObjectType, Null, Enviroment, Function, HashKey, HashType};
 use buildin::{BuildIn, BuildInFunction};
 
 const TRUE: Object = Object { object_type: ObjectType::Boolean(true) };
@@ -145,16 +147,14 @@ fn eval_index_expression(left: Object, index: Object) -> Object {
             if let ObjectType::Integer(i) = index.object_type {
                 let max_index = xs.elements.len() - 1;
                 if max_index < i as usize || i < 0 {
-                    Object::new_error(format!("index out of range: max={} got={}",
-                                                    max_index,
-                                                    i))
+                    Object::new_error(format!("index out of range: max={} got={}", max_index, i))
                 } else {
                     (&xs.elements)[i as usize].clone()
                 }
             } else {
                 Object::new_error(format!("index operator not supported {:?}", index.object_type))
             }
-        },
+        }
         ObjectType::HashType(xs) => eval_hash_index_expression(xs, index),
         _ => Object::new_error(format!("index operator not supported {:?}", index.object_type)),
     }
@@ -168,7 +168,7 @@ fn eval_hash_index_expression(left: HashType, index: Object) -> Object {
                 Some(x) => x.clone(),
                 None => NULL,
             }
-        },
+        }
         None => Object::new_error(format!("unusable as hash key: {:?}", index.object_type)),
     }
 }
@@ -231,7 +231,7 @@ fn eval_if_expression(x: &IfExpression, env: &mut Enviroment) -> Object {
 
 fn eval_hash_literal(x: HashLiteral, env: &mut Enviroment) -> Object {
     let mut pairs: HashMap<HashKey, Object> = HashMap::new();
-    
+
     for (k, v) in x.pairs.iter() {
         let key = eval(k.to_ast(), env);
         if is_error(&key) {
@@ -250,9 +250,7 @@ fn eval_hash_literal(x: HashLiteral, env: &mut Enviroment) -> Object {
         }
     }
 
-    Object{
-        object_type: ObjectType::HashType(HashType { pairs: pairs})
-    }
+    Object { object_type: ObjectType::HashType(HashType { pairs: pairs }) }
 }
 
 fn is_truthy(x: Object) -> bool {
@@ -351,9 +349,9 @@ fn eval_bang_operator_expression(right: Object) -> Object {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lexer;
-    use parser;
-    use ast::Node;
+    use lexer::lexer;
+    use parser::parser;
+    use parser::ast::Node;
 
     fn test_eval(input: String) -> Object {
         let l = lexer::Lexer::new(input);
@@ -625,15 +623,13 @@ mod tests {
 
     #[test]
     fn it_should_evaluate_hash_index_expression() {
-        let expects = [
-            ("{\"foo\": 5}[\"foo\"]", Some(5)),
-            ("{\"foo\": 5}[\"bar\"]", None),
-            ("let key = \"foo\"; {\"foo\": 5}[key]", Some(5)),
-            ("{}[\"bar\"]", None),
-            ("{5: 5}[5]", Some(5)),
-            ("{true: 5}[true]", Some(5)),
-            ("{false: 5}[false]", Some(5)),
-        ];
+        let expects = [("{\"foo\": 5}[\"foo\"]", Some(5)),
+                       ("{\"foo\": 5}[\"bar\"]", None),
+                       ("let key = \"foo\"; {\"foo\": 5}[key]", Some(5)),
+                       ("{}[\"bar\"]", None),
+                       ("{5: 5}[5]", Some(5)),
+                       ("{true: 5}[true]", Some(5)),
+                       ("{false: 5}[false]", Some(5))];
         for expect in expects.iter() {
             let result = test_eval(expect.0.to_string());
             assert_eq!(result.to_i32(), expect.1);

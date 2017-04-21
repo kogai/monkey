@@ -1,10 +1,10 @@
 use std::str::FromStr;
-use token::{Token, TokenType};
-use lexer::Lexer;
-use ast::{Program, LetStatement, ReturnStatement, ExpressionStatement, Identifier, PrefixExpression,
-          InfixExpression, IntegerLiteral, Boolean, IfExpression, BlockStatement, FunctionLiteral,
-          CallExpression, Statements, Expressions, StringLiteral, ArrayLiteral, IndexExpression,
-          HashLiteral};
+use lexer::token::{Token, TokenType};
+use lexer::lexer::Lexer;
+use parser::ast::{Program, LetStatement, ReturnStatement, ExpressionStatement, Identifier,
+                  PrefixExpression, InfixExpression, IntegerLiteral, Boolean, IfExpression,
+                  BlockStatement, FunctionLiteral, CallExpression, Statements, Expressions,
+                  StringLiteral, ArrayLiteral, IndexExpression, HashLiteral};
 
 #[derive(Debug, PartialOrd, PartialEq, Ord, Eq)]
 enum Precedence {
@@ -479,8 +479,8 @@ impl Parser {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    use ast::Node;
-    use lexer;
+    use parser::ast::Node;
+    use lexer::lexer;
 
     #[test]
     fn it_should_detect_token_type() {

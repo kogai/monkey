@@ -1,5 +1,5 @@
-use object::{Object, ObjectType};
-use evaluator::NULL;
+use evaluator::object::{Object, ObjectType};
+use evaluator::evaluator::NULL;
 
 pub trait BuildInFunction {
     fn call(&self, Vec<Object>) -> Object;

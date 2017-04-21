@@ -1,10 +1,10 @@
 use std::io::{self, Write};
 
-use lexer;
-use parser;
-use ast::Node;
-use evaluator::eval;
-use object::Enviroment;
+use lexer::lexer;
+use parser::parser;
+use parser::ast::Node;
+use evaluator::evaluator::eval;
+use evaluator::object::Enviroment;
 
 pub fn run() {
     let prompt = ">>";

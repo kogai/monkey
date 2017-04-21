@@ -1,4 +1,4 @@
-use lexer::{is_digit, is_letter};
+use utils::{is_digit, is_letter};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenType {

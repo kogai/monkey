@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter, Result};
 use std::collections::HashMap;
-use ast::{Identifier, BlockStatement};
+
+use parser::ast::{Identifier, BlockStatement};
 use buildin::BuildIn;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

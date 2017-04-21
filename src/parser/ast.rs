@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use token::Token;
+use lexer::token::Token;
 
 pub trait Node {
     fn token_literal(&self) -> String;
