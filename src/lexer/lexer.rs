@@ -23,23 +23,21 @@ impl Lexer {
         l
     }
 
-    fn read_char(&mut self) {
-        let position = self.position as usize;
-
-        self.current_char = match self.input.chars().nth(position) {
+    fn get_char(&self, position: i32) -> String {
+        match self.input.chars().nth(position as usize) {
             Some(x) => x.to_string(),
             None => EMPTY_STR.to_string(),
-        };
+        }
+    }
 
+    fn read_char(&mut self) {
+        self.current_char = self.get_char(self.position);
         self.position = self.read_position;
         self.read_position += 1;
     }
 
     fn peak_char(&self) -> String {
-        match self.input.chars().nth((self.read_position - 1) as usize) {
-            Some(x) => x.to_string(),
-            None => EMPTY_STR.to_string(),
-        }
+        self.get_char(self.read_position - 1)
     }
 
     pub fn next_token(&mut self) -> token::Token {
