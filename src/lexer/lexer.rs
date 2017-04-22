@@ -8,6 +8,7 @@ pub struct Lexer {
     position: i32,
     read_position: i32,
     line: u8,
+    column: u8,
 }
 
 impl Lexer {
@@ -18,6 +19,7 @@ impl Lexer {
             position: 0,
             read_position: 1,
             line: 1,
+            column: 0,
         };
         l.read_char();
         l
@@ -33,6 +35,7 @@ impl Lexer {
     fn read_char(&mut self) {
         self.current_char = self.get_char(self.position);
         self.position = self.read_position;
+        self.column = self.column + 1;
         self.read_position += 1;
     }
 
@@ -43,7 +46,7 @@ impl Lexer {
     pub fn next_token(&mut self) -> token::Token {
         self.skip_white_space();
         let current_char = &self.current_char.clone();
-        let position = self.position as u8;
+        let position = self.column;
 
         let mut is_string = false;
         let seed = match current_char {
@@ -122,13 +125,13 @@ impl Lexer {
             },
             _ => (false, false),
         };
-
+        if is_newline {
+            self.column = 0;
+            self.line = self.line + 1;
+        };
         if is_whitespace {
             self.read_char();
             self.skip_white_space()
-        };
-        if is_newline {
-            self.line = self.line + 1;
         };
     }
 }
@@ -155,6 +158,24 @@ mod tests {
             let t = l.next_token();
             assert_eq!(t.token_type, token_type);
             assert_eq!(t.literal, literal);
+            assert_eq!(t.column_num, column_num);
+        }
+    }
+
+    #[test]
+    fn it_should_count_mutiple_line() {
+        let mut l = Lexer::new("
+        let x = 0;
+        let y = 1;
+        ".to_string());
+        let expects = vec![
+            (2, 9), (2,13), (2, 15), (2, 17), (2, 18),
+            (3, 9), (3,13), (3, 15), (3, 17), (3, 18)
+        ];
+
+        for (line_num, column_num) in expects {
+            let t = l.next_token();
+            assert_eq!(t.line_num, line_num);
             assert_eq!(t.column_num, column_num);
         }
     }

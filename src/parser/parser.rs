@@ -460,9 +460,11 @@ impl Parser {
     }
 
     fn peek_error(&mut self, t: TokenType) {
-        self.errors.push(format!("expected next token to be {:?}, got {:?} instead",
+        self.errors.push(format!("expected next token to be {:?}, got {:?} instead, at line: {}, column: {}",
                                  t,
-                                 self.peek_token.token_type));
+                                 self.peek_token.token_type,
+                                 self.peek_token.line_num,
+                                 self.peek_token.column_num));
     }
 }
 
@@ -541,22 +543,23 @@ mod tests {
 
     #[test]
     fn it_should_peek_error_syntax() {
-        let l = lexer::Lexer::new("
-      let x 5;
-      let = 10;
-      let 838383;
-    "
-                                          .to_string());
+        let l = lexer::Lexer::new(r#"
+        let x 5;
+        let = 10;
+        let 838383;
+        "#.to_string());
 
         let mut parser = Parser::new(l);
         parser.parse_program();
         let errors_count = parser.errors.len();
 
         assert_eq!(errors_count, 4);
-        let expects = ["expected next token to be ASSIGN, got INT(\"5\") instead",
-                       "expected next token to be IDENT(\"=\"), got ASSIGN instead",
-                       "expected next token to be IDENT(\"838383\"), got INT(\"838383\") instead",
-                       "expected next token to be ASSIGN, got INT(\"838383\") instead"];
+        let expects = [
+            r#"expected next token to be ASSIGN, got INT("5") instead, at line: 2, column: 15"#,
+            r#"expected next token to be IDENT("="), got ASSIGN instead, at line: 3, column: 13"#,
+            r#"expected next token to be IDENT("838383"), got INT("838383") instead, at line: 4, column: 13"#,
+            r#"expected next token to be ASSIGN, got INT("838383") instead, at line: 4, column: 13"#
+        ];
 
         for i in 0..errors_count {
             assert_eq!(&parser.errors[i], &expects[i]);
