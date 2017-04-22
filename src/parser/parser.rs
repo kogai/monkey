@@ -475,6 +475,25 @@ mod tests {
     use parser::ast::Node;
     use lexer::lexer;
 
+    fn create_program(input: &str) -> (Parser, Program) {
+        let lex = lexer::Lexer::new(input.to_string());
+        let mut parser = Parser::new(lex);
+        let program = parser.parse_program();
+        (parser, program)
+    }
+
+    fn create_parsed_statement(input: &str) -> (Vec<Statements>, usize) {
+        let (_, program) = create_program(input);
+        let count = program.statements.len();
+        (program.statements, count)
+    }
+
+    fn create_parsed_error(input: &str) -> (Vec<String>, usize) {
+        let (parser, _) = create_program(input);
+        let count = parser.errors.len();
+        (parser.errors, count)
+    }
+
     #[test]
     fn it_should_detect_token_type() {
         let l = lexer::Lexer::new("let x = 5;".to_string());
@@ -512,18 +531,11 @@ mod tests {
 
     #[test]
     fn it_should_parse_statements() {
-        let l = lexer::Lexer::new("
-      let x = 5;
-      let y = 10;
-      let foobar = 838383;
-    "
-                                          .to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
-
+        let (statements, statements_count) = create_parsed_statement("
+            let x = 5;
+            let y = 10;
+            let foobar = 838383;
+        ");
         assert_eq!(statements_count, 3);
 
         let expects = ["x", "y", "foobar"];
@@ -543,26 +555,22 @@ mod tests {
 
     #[test]
     fn it_should_peek_error_syntax() {
-        let l = lexer::Lexer::new(r#"
-        let x 5;
-        let = 10;
-        let 838383;
-        "#.to_string());
-
-        let mut parser = Parser::new(l);
-        parser.parse_program();
-        let errors_count = parser.errors.len();
+        let (errors, errors_count) = create_parsed_error("
+            let x 5;
+            let = 10;
+            let 838383;
+        ");
 
         assert_eq!(errors_count, 4);
         let expects = [
-            r#"expected next token to be ASSIGN, got INT("5") instead, at line: 2, column: 15"#,
-            r#"expected next token to be IDENT("="), got ASSIGN instead, at line: 3, column: 13"#,
-            r#"expected next token to be IDENT("838383"), got INT("838383") instead, at line: 4, column: 13"#,
-            r#"expected next token to be ASSIGN, got INT("838383") instead, at line: 4, column: 13"#
+            r#"expected next token to be ASSIGN, got INT("5") instead, at line: 2, column: 19"#,
+            r#"expected next token to be IDENT("="), got ASSIGN instead, at line: 3, column: 17"#,
+            r#"expected next token to be IDENT("838383"), got INT("838383") instead, at line: 4, column: 17"#,
+            r#"expected next token to be ASSIGN, got INT("838383") instead, at line: 4, column: 17"#
         ];
 
         for i in 0..errors_count {
-            assert_eq!(&parser.errors[i], &expects[i]);
+            assert_eq!(&errors[i], &expects[i]);
         }
     }
 
@@ -585,13 +593,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_identifier_expression() {
-        let l = lexer::Lexer::new("foobar;".to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
-
+        let (statements, statements_count) = create_parsed_statement("foobar");
         assert_eq!(statements_count, 1);
         let statement = &statements[0];
         if let Statements::ExpressionStatement(x) = statement.clone() {
@@ -606,13 +608,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_integer_literal_expression() {
-        let l = lexer::Lexer::new("5;".to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
-
+        let (statements, statements_count) = create_parsed_statement("5;");
         assert_eq!(statements_count, 1);
 
         let statement = &statements[0];
@@ -628,13 +624,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_string_expression() {
-        let l = lexer::Lexer::new("\"hello world.\";".to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
-
+        let (statements, statements_count) = create_parsed_statement(r#""hello world.";"#);
         assert_eq!(statements_count, 1);
 
         let statement = &statements[0];
@@ -651,20 +641,15 @@ mod tests {
     fn it_should_parse_boolean_expression() {
         let expects = [("true;", true), ("false;", false)];
 
-        for expect in expects.iter() {
-            let l = lexer::Lexer::new(expect.0.to_string());
-
-            let mut parser = Parser::new(l);
-            let program = parser.parse_program();
-            let statements = program.statements;
-            let statements_count = statements.len();
+        for &(seed, expect) in expects.iter() {
+            let (statements, statements_count) = create_parsed_statement(seed);
 
             assert_eq!(statements_count, 1);
             let statement = &statements[0];
             if let Statements::ExpressionStatement(x) = statement.clone() {
                 let identifier = x.expression;
                 if let Expressions::Boolean(y) = identifier {
-                    assert_eq!(y.value, expect.1);
+                    assert_eq!(y.value, expect);
                     continue;
                 }
             }
@@ -674,11 +659,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_if_expression() {
-        let l = lexer::Lexer::new("if (x < y) {x}".to_string());
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
+        let (statements, statements_count) = create_parsed_statement("if (x < y) {x}");
         assert_eq!(statements_count, 1);
 
         if let Statements::ExpressionStatement(expression) = (&statements[0]).clone() {
@@ -703,11 +684,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_if_else_expression() {
-        let l = lexer::Lexer::new("if (x < y) {x} else {y}".to_string());
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
+        let (statements, statements_count) = create_parsed_statement("if (x < y) {x} else {y}");
         assert_eq!(statements_count, 1);
 
         if let Statements::ExpressionStatement(expression) = statements[0].clone() {
@@ -742,11 +719,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_function_literal() {
-        let l = lexer::Lexer::new("fn(x, y) { x + y };".to_string());
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
+        let (statements, statements_count) = create_parsed_statement("fn(x, y) { x + y };");
         assert_eq!(statements_count, 1);
 
         if let Statements::ExpressionStatement(expression) = statements[0].clone() {
@@ -777,12 +750,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_array_literal() {
-        let l = lexer::Lexer::new("[1, 2 * 2, 3 + 3];".to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
+        let (statements, statements_count) = create_parsed_statement("[1, 2 * 2, 3 + 3];");
         assert_eq!(statements_count, 1);
         if let Statements::ExpressionStatement(x) = (&statements[0]).clone() {
             if let Expressions::ArrayLiteral(y) = x.expression {
@@ -796,12 +764,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_index_expression() {
-        let l = lexer::Lexer::new("myArray[1 + 2];".to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
+        let (statements, statements_count) = create_parsed_statement("myArray[1 + 2];");
         assert_eq!(statements_count, 1);
         if let Statements::ExpressionStatement(x) = (&statements[0]).clone() {
             if let Expressions::IndexExpression(y) = x.expression {
@@ -817,11 +780,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_call_expression() {
-        let l = lexer::Lexer::new("add(1, 2 * 3, 4 + 5);".to_string());
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
+        let (statements, statements_count) = create_parsed_statement("add(1, 2 * 3, 4 + 5);");
         assert_eq!(statements_count, 1);
 
         if let Statements::ExpressionStatement(expression) = statements[0].clone() {
@@ -841,12 +800,7 @@ mod tests {
         let expects = [("!5;", "!", 5, "5"), ("-15;", "-", 15, "15")];
 
         for expect in expects.iter() {
-            let l = lexer::Lexer::new(expect.0.to_string());
-
-            let mut parser = Parser::new(l);
-            let program = parser.parse_program();
-            let statements = program.statements;
-            let statements_count = statements.len();
+            let (statements, statements_count) = create_parsed_statement(expect.0);
             assert_eq!(statements_count, 1);
 
             if let Statements::ExpressionStatement(expression) = statements[0].clone() {
@@ -866,12 +820,7 @@ mod tests {
         let expects = [("!true;", "!", true), ("!false;", "!", false)];
 
         for expect in expects.iter() {
-            let l = lexer::Lexer::new(expect.0.to_string());
-
-            let mut parser = Parser::new(l);
-            let program = parser.parse_program();
-            let statements = program.statements;
-            let statements_count = statements.len();
+            let (statements, statements_count) = create_parsed_statement(expect.0);
             assert_eq!(statements_count, 1);
 
 
@@ -898,12 +847,7 @@ mod tests {
                        ("5 != 5;", 5, "!=", 5)];
 
         for expect in expects.iter() {
-            let l = lexer::Lexer::new(expect.0.to_string());
-
-            let mut parser = Parser::new(l);
-            let program = parser.parse_program();
-            let statements = program.statements;
-            let statements_count = statements.len();
+            let (statements, statements_count) = create_parsed_statement(expect.0);
             assert_eq!(statements_count, 1);
 
             if let Statements::ExpressionStatement(expression) = statements[0].clone() {
@@ -927,12 +871,7 @@ mod tests {
                        ("false == false;", false, "==", false)];
 
         for expect in expects.iter() {
-            let l = lexer::Lexer::new(expect.0.to_string());
-
-            let mut parser = Parser::new(l);
-            let program = parser.parse_program();
-            let statements = program.statements;
-            let statements_count = statements.len();
+            let (statements, statements_count) = create_parsed_statement(expect.0);
             assert_eq!(statements_count, 1);
 
             if let Statements::ExpressionStatement(expression) = statements[0].clone() {
@@ -951,12 +890,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_hash_literal_with_string() {
-        let l = lexer::Lexer::new("{ \"one\": 1, \"two\": 2, \"three\": 3 }".to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
+        let (statements, statements_count) = create_parsed_statement(r#"{ "one": 1, "two": 2, "three": 3 }"#);
         assert_eq!(statements_count, 1);
 
         if let Statements::ExpressionStatement(expression) = statements[0].clone() {
@@ -977,11 +911,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_empty_hash_literal() {
-        let l = lexer::Lexer::new("{}".to_string());
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
+        let (statements, statements_count) = create_parsed_statement(r#"{}"#);
         assert_eq!(statements_count, 1);
         if let Statements::ExpressionStatement(expression) = statements[0].clone() {
             if let Expressions::HashLiteral(x) = expression.expression {
@@ -992,13 +922,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_hash_expression() {
-        let l = lexer::Lexer::new("{ \"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5 }"
-                                      .to_string());
-
-        let mut parser = Parser::new(l);
-        let program = parser.parse_program();
-        let statements = program.statements;
-        let statements_count = statements.len();
+        let (statements, statements_count) = create_parsed_statement(r#"{ "one": 0 + 1, "two": 10 - 8, "three": 15 / 5 }"#);
         assert_eq!(statements_count, 1);
 
         if let Statements::ExpressionStatement(expression) = statements[0].clone() {
@@ -1054,7 +978,6 @@ mod tests {
             let mut parser = Parser::new(l);
             let program = parser.parse_program();
             let actual = program.to_enum().string();
-            println!("{:?}", actual);
             assert_eq!(actual, expect.1);
         }
     }
