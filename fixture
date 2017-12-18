@@ -1,11 +1,2 @@
-let five = 5;
-let ten = 10;
-
-let add = fn(x, y) {
-  x + y;
-};
-
-let result = add(five, ten);
-let array = [1, 2, 3];
-
-let method = {"add_one": fn(x) { x + 1; }, }; method["add_one"](10);
+let add = fn(x, y) {x + y;}; add(5 + 5, add(5, 5));
+let five = 5; let ten = 10; let create_add = fn(x) { fn(y) { x + y } }; let add_five = create_add(five); add_five(ten);
